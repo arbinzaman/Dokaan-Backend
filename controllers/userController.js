@@ -11,7 +11,7 @@ export const getUsers = async (req, res) => {
     }
 }
 
-//get user by id
+//create user by id
 export const createUser = async (req, res) => {
     const { name, email, password,role } = req.body;
 
@@ -60,6 +60,23 @@ export const updateUser = async (req, res) => {
             },
         });
         res.json(updateUser);
+    } 
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+//delete user
+export const deleteUser = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await Prisma.user.delete({
+            where: {
+                id: parseInt(id),
+            },
+        });
+        res.json({ message: "User deleted" });
     } 
     catch (error) {
         res.status(500).json({ error: error.message });
