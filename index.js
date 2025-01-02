@@ -8,7 +8,21 @@ app.get('/', (req, res) => {
     res.send('Hello World from Dokaan backend!');
 });
 
+//middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
+//routes file
+import routes from "./routes/index.js";
+app.use(routes);
+
+
+// Error handler
+BigInt.prototype.toJSON = function () {
+    return this.toString();
+  };
+
+// Start the server
 app.listen(PORT, () => {
     console.log(`Backend is running on http://localhost:${PORT}`);
 });
