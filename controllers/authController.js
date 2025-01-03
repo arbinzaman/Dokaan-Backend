@@ -2,6 +2,7 @@ import prisma from "../config/db.config.js";
 import vine, { errors } from "@vinejs/vine";
 import { registerSchema ,loginSchema} from "../validation/authValidation.js";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 class AuthController {
   static async register(req, res) {
@@ -83,11 +84,25 @@ class AuthController {
           .json({ status: 400, message: "Invalid credentials" });
       }
 
+
+  // issue token
+  const payloadData = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  };
+  const token = jwt.sign(payloadData, process.env.JWT_SECRET, {
+    expiresIn: "365d",
+  });
+
+
       return res.json({
         status: 200,
         message: "Login successful",
-        data: user,
-        payload,
+        // data: user,
+        // payload,
+        access_token: `Bearer ${token}`,
       });
       
     } catch (error) {
