@@ -57,6 +57,7 @@ class AuthController {
   static async login(req, res) {
     try {
       const body = req.body;
+      console.log(body);
 
       const validator = vine.compile(loginSchema);
       const payload = await validator.validate(body);
@@ -102,6 +103,9 @@ class AuthController {
         message: "Login successful",
         // data: user,
         // payload,
+
+        
+        //Token Name
         access_token: `Bearer ${token}`,
       });
       
