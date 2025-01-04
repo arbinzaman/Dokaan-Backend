@@ -19,48 +19,6 @@ export default class profileController {
     }
   }
 
-  static async getAllProfiles(req, res) {
-    try {
-      const users = await prisma.user.findMany({
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-
-      return res.json({
-        status: 200,
-        message: "All profiles",
-        data: users,
-      });
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ status: 500, message: "Internal server error" });
-    }
-  }
-
-  // static async getProfile(req, res) {
-  //     try {
-  //         const user = await prisma.user.findUnique({
-  //             where: {
-  //                 id: req.user.id,
-  //             },
-  //         });
-  //     } catch (error) {
-  //         console.log(error);
-  //         return res
-  //             .status(500)
-  //             .json({ status: 500, message: "Internal server error" });
-  //     }
-  // }
-
   static async updateProfile(req, res) {
     try{
         const { id } = req.params;
