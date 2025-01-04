@@ -1,5 +1,6 @@
 import "dotenv/config"; // Import the dotenv package and call the config method to load the environment variables from the .env file
 import express from "express"; // Import the express package 
+import fileUpload from "express-fileupload";
 const app = express();
 const PORT = 5000; 
 
@@ -10,6 +11,7 @@ app.get('/', (req, res) => {
 
 //middleware
 app.use(express.json());
+app.use(fileUpload());
 app.use(express.urlencoded({ extended: false }));
 
 //routes file
