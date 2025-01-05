@@ -8,6 +8,7 @@ class AuthController {
   static async register(req, res) {
     try {
       const body = req.body;
+      console.log(body);
       const validator = vine.compile(registerSchema);
       const payload = await validator.validate(body);
 
@@ -106,7 +107,7 @@ class AuthController {
 
         
         //Token Name
-        access_token: `Bearer ${token}`,
+        access_token: `${token}`,
       });
       
     } catch (error) {
