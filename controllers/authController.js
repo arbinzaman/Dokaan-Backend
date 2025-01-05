@@ -107,7 +107,7 @@ class AuthController {
 
         
         //Token Name
-        access_token: `${token}`,
+        access_token: `Bearer ${token}`,
       });
       
     } catch (error) {
