@@ -1,6 +1,7 @@
 import { generateFileName, imageValidator } from "../utils/helper.js";
 import { errors } from "@vinejs/vine";
-import  prisma  from "../config/db.config.js";
+import  Prisma  from "../config/db.config.js";
+import cloudinary from "../config/cloudinary.config.js";
 
 export default class profileController {
   static async getProfile(req, res) {
@@ -20,58 +21,66 @@ export default class profileController {
   }
 
   static async updateProfile(req, res) {
-    try{
-        const { id } = req.params;
-
-    if (!req.files || Object.keys(req.files).length === 0) {
-      return res
-        .status(400)
-        .json({ status: 400, message: "No files were uploaded." });
-    }
-    const profile = req.files.profile;
-    const message = imageValidator(profile?.size, profile?.mimetype);
-
-    if (message !== null) {
-      return res.status(400).json({
-        status: 400,
-        errors: "file should be less than 1MB and should be an image",
-      });
-    }
-
-    const imgExt = profile.name.split(".")[1];
-    const imageName = generateFileName() + "." + imgExt;
-    const uploadPath = process.cwd() + "/public/images" + imageName;
-
-    profile.mv(uploadPath, async (err) => {
-      if (err) {
-        return res.status(500).json({
-          status: 500,
-          errors: "Error uploading file",
+    try {
+      const { id } = req.params;
+      const { name, email, password, role } = req.body;
+  
+      let profileImageUrl = null;
+  
+      // Handle profile image upload
+      if (req.files && req.files.profileImageUrl) {
+        const profile = req.files.profileImageUrl;
+  
+        // Validate image using imageValidator
+        const validationError = imageValidator(profile.size, profile.mimetype);
+        if (validationError) {
+          return res.status(400).json({
+            status: 400,
+            message: validationError,
+          });
+        }
+  
+        // Generate a unique filename
+        const fileName = generateFileName() + "." + profile.name.split(".").pop();
+  
+        // Upload the image to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(profile.tempFilePath, {
+          folder: "user_profiles", // Optional: Cloudinary folder
+          public_id: fileName, // Use the generated filename
         });
+  
+        profileImageUrl = uploadResult.secure_url; // Save the image URL
       }
-    });
-
-    await prisma.user.update({
-      where: {
-        id: Number(id),
-      },
-      data: {
-        profile: imageName,
-      },
-    });
-    
-    return res.json({
-        status: 200,
-        message: "Profile updated successfully",
+  
+      // Update user in the database
+      const updatedUser = await Prisma.user.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          name: name || undefined,
+          email: email || undefined,
+          password: password || undefined,
+          role: role || undefined,
+          profileImageUrl: profileImageUrl || undefined, // Update profileImage if a new image is uploaded
+        },
       });
+  
+      // Exclude password from the response
+      const { password: _, ...userWithoutPassword } = updatedUser;
+  
+      return res.json({
+        status: 200,
+        message: "User updated successfully",
+        data: userWithoutPassword,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ status: 500, message: "Internal server error" });
     }
-    catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ status: 500, message: "Internal server error" });
-    }
-  }
+  };
+  
+  
 
   static async deleteProfile(req, res) {
     try {
