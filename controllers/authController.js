@@ -55,67 +55,66 @@ class AuthController {
 
 
   //login
-  static async login(req, res) {
-    try {
-      const body = req.body;
-      console.log(body);
 
-      const validator = vine.compile(loginSchema);
-      const payload = await validator.validate(body);
- 
+static async login(req, res) {
+  try {
+    const body = req.body;
+    console.log(body);
 
-      //check if user exist
-      const user = await prisma.user.findUnique({
-        where: {
-          email: payload.email,
-        },
-      });
+    const validator = vine.compile(loginSchema);
+    const payload = await validator.validate(body);
 
-      if (!user) {
-        return res
-          .status(400)
-          .json({ status: 400, message: "User does not exist" });
-      }
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: {
+        email: payload.email,
+      },
+    });
 
-      //compare password
-      const isMatch = bcrypt.compareSync(payload.password, user.password);
-
-      if (!isMatch) {
-        return res
-          .status(400)
-          .json({ status: 400, message: "Invalid credentials" });
-      }
-
-
-  // issue token
-  const payloadData = {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-  };
-  const token = jwt.sign(payloadData, process.env.JWT_SECRET, {
-    expiresIn: "365d",
-  });
-
-
-      return res.json({
-        status: 200,
-        message: "Login successful",
-        // data: user,
-        // payload,
-
-        
-        //Token Name
-        access_token: `Bearer ${token}`,
-      });
-      
-    } catch (error) {
+    if (!user) {
       return res
-        .status(500)
-        .json({ status: 500, message: "Internal server error" });
+        .status(400)
+        .json({ status: 400, message: "User does not exist" });
     }
+
+    // Compare password
+    const isMatch = bcrypt.compareSync(payload.password, user.password);
+
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ status: 400, message: "Invalid credentials" });
+    }
+
+    // Issue token
+    const payloadData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+    const token = jwt.sign(payloadData, process.env.JWT_SECRET, {
+      expiresIn: "365d",
+    });
+
+    // Exclude the password from the user object
+    const { password, ...userWithoutPassword } = user;
+
+    return res.json({
+      status: 200,
+      message: "Login successful",
+      user: userWithoutPassword,
+      access_token: `Bearer ${token}`,
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ status: 500, message: "Internal server error" });
   }
+}
+
 
 
 }
