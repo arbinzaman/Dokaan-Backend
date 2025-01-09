@@ -23,46 +23,35 @@ export default class profileController {
   static async updateProfile(req, res) {
     try {
       const { id } = req.params;
-      const { name, email, password, role } = req.body;
-  
+      const { name, email } = req.body;
       let profileImageUrl = null;
   
       // Handle profile image upload
       if (req.files && req.files.profileImageUrl) {
         const profile = req.files.profileImageUrl;
   
-        // Validate image using imageValidator
+        // Validate image
         const validationError = imageValidator(profile.size, profile.mimetype);
         if (validationError) {
-          return res.status(400).json({
-            status: 400,
-            message: validationError,
-          });
+          return res.status(400).json({ status: 400, message: validationError });
         }
   
-        // Generate a unique filename
+        // Generate filename and upload to Cloudinary
         const fileName = generateFileName() + "." + profile.name.split(".").pop();
-  
-        // Upload the image to Cloudinary
         const uploadResult = await cloudinary.uploader.upload(profile.tempFilePath, {
-          folder: "user_profiles", // Optional: Cloudinary folder
-          public_id: fileName, // Use the generated filename
+          folder: "user_profiles",
+          public_id: fileName,
         });
-  
-        profileImageUrl = uploadResult.secure_url; // Save the image URL
+        profileImageUrl = uploadResult.secure_url;
       }
   
-      // Update user in the database
+      // Update user data
       const updatedUser = await Prisma.user.update({
-        where: {
-          id: Number(id),
-        },
+        where: { id: Number(id) },
         data: {
           name: name || undefined,
           email: email || undefined,
-          password: password || undefined,
-          role: role || undefined,
-          profileImageUrl: profileImageUrl || undefined, // Update profileImage if a new image is uploaded
+          profileImageUrl: profileImageUrl || undefined,
         },
       });
   
@@ -78,7 +67,7 @@ export default class profileController {
       console.error(error);
       return res.status(500).json({ status: 500, message: "Internal server error" });
     }
-  };
+  };  
   
   
 
