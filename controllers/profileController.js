@@ -1,6 +1,6 @@
 import { generateFileName, imageValidator } from "../utils/helper.js";
 import { errors } from "@vinejs/vine";
-import  Prisma  from "../config/db.config.js";
+import Prisma from "../config/db.config.js";
 import cloudinary from "../config/cloudinary.config.js";
 
 export default class profileController {
@@ -9,11 +9,11 @@ export default class profileController {
       const user = req.user;
       return res.json({
         status: 200,
-        message: "Profile",
+        message: "Profile retrieved successfully",
         data: user,
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return res
         .status(500)
         .json({ status: 500, message: "Internal server error" });
@@ -25,17 +25,17 @@ export default class profileController {
       const { id } = req.params;
       const { name, email } = req.body;
       let profileImageUrl = null;
-  
+
       // Handle profile image upload
       if (req.files && req.files.profileImageUrl) {
         const profile = req.files.profileImageUrl;
-  
+
         // Validate image
         const validationError = imageValidator(profile.size, profile.mimetype);
         if (validationError) {
           return res.status(400).json({ status: 400, message: validationError });
         }
-  
+
         // Generate filename and upload to Cloudinary
         const fileName = generateFileName() + "." + profile.name.split(".").pop();
         const uploadResult = await cloudinary.uploader.upload(profile.tempFilePath, {
@@ -44,8 +44,8 @@ export default class profileController {
         });
         profileImageUrl = uploadResult.secure_url;
       }
-  
-      // Update user data
+
+      // Update user data in the database
       const updatedUser = await Prisma.user.update({
         where: { id: Number(id) },
         data: {
@@ -53,27 +53,31 @@ export default class profileController {
           email: email || undefined,
           profileImageUrl: profileImageUrl || undefined,
         },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profileImageUrl: true,
+          role: true,
+        },
       });
-  
-      // Exclude password from the response
-      const { password: _, ...userWithoutPassword } = updatedUser;
-  
+
       return res.json({
         status: 200,
-        message: "User updated successfully",
-        data: userWithoutPassword,
+        message: "Profile updated successfully",
+        data: updatedUser,
       });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ status: 500, message: "Internal server error" });
+      console.error("Error updating profile:", error);
+      return res
+        .status(500)
+        .json({ status: 500, message: "Internal server error" });
     }
-  };  
-  
-  
+  }
 
   static async deleteProfile(req, res) {
     try {
-      await prisma.user.delete({
+      await Prisma.user.delete({
         where: {
           id: req.user.id,
         },
@@ -84,7 +88,7 @@ export default class profileController {
         message: "Profile deleted successfully",
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return res
         .status(500)
         .json({ status: 500, message: "Internal server error" });
@@ -97,7 +101,7 @@ export default class profileController {
       const validator = vine.compile(updatePasswordSchema);
       const payload = await validator.validate(body);
 
-      const user = await prisma.user.findUnique({
+      const user = await Prisma.user.findUnique({
         where: {
           id: req.user.id,
         },
@@ -113,7 +117,7 @@ export default class profileController {
 
       const hashedPassword = bcrypt.hashSync(payload.newPassword, 10);
 
-      await prisma.user.update({
+      await Prisma.user.update({
         where: {
           id: req.user.id,
         },
@@ -127,7 +131,7 @@ export default class profileController {
         message: "Password updated successfully",
       });
     } catch (error) {
-      console.log(error.messages);
+      console.error(error);
       if (error instanceof errors.E_VALIDATION_ERROR) {
         return res.status(400).json({ error: error.messages });
       } else {
