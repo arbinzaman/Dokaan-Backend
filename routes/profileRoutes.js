@@ -7,6 +7,7 @@ const router = Router();
 
 router.get("/", authMiddleware, ProfileController.getProfile); 
 router.put("/:id", authMiddleware, ProfileController.updateProfile);
+router.put("/change-password/:id", authMiddleware, ProfileController.updatePassword);
 
 
 export default router;

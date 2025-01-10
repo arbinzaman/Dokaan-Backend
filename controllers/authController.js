@@ -83,7 +83,7 @@ static async login(req, res) {
     if (!isMatch) {
       return res
         .status(400)
-        .json({ status: 400, message: "Invalid credentials" });
+        .json({ status: 400, message: "wrong password" });
     }
 
     // Issue token

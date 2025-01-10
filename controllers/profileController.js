@@ -1,8 +1,9 @@
 import { generateFileName, imageValidator } from "../utils/helper.js";
-import { errors } from "@vinejs/vine";
+import vine, { errors } from "@vinejs/vine";
 import Prisma from "../config/db.config.js";
 import cloudinary from "../config/cloudinary.config.js";
-
+import { updatePasswordSchema } from "../validation/authValidation.js";
+import bcrypt from "bcryptjs";
 export default class profileController {
   static async getProfile(req, res) {
     try {
@@ -98,25 +99,42 @@ export default class profileController {
   static async updatePassword(req, res) {
     try {
       const body = req.body;
+      console.log(body);
       const validator = vine.compile(updatePasswordSchema);
       const payload = await validator.validate(body);
-
+  
+      // Fetch the user from the database using the user ID from the request
       const user = await Prisma.user.findUnique({
         where: {
           id: req.user.id,
         },
       });
-
+  
+      // Check if the old password matches the stored password
       const isMatch = bcrypt.compareSync(payload.oldPassword, user.password);
+      // console.log("Old Password (Plain Text):", payload.oldPassword);
+      // console.log("Stored Password (Hashed):", user.password);
+      // console.log("Password Match:", isMatch);
 
+      // console.log("Payload Old Password:", payload.oldPassword);
+      // console.log("Fetched User:", user);
+      // console.log("Stored Hashed Password:", user.password);
+      // console.log("Password Match Result:", bcrypt.compareSync(payload.oldPassword, user.password));
+
+      
       if (!isMatch) {
-        return res
-          .status(400)
-          .json({ status: 400, message: "Invalid credentials" });
+        return res.status(400).json({ status: 400, message: "Old password is incorrect" });
       }
-
+  
+      // Check if the new password is the same as the old one
+      if (payload.oldPassword === payload.newPassword) {
+        return res.status(400).json({ status: 400, message: "New password cannot be the same as the old password" });
+      }
+  
+      // Hash the new password
       const hashedPassword = bcrypt.hashSync(payload.newPassword, 10);
-
+  
+      // Update the user's password in the database
       await Prisma.user.update({
         where: {
           id: req.user.id,
@@ -125,7 +143,7 @@ export default class profileController {
           password: hashedPassword,
         },
       });
-
+  
       return res.json({
         status: 200,
         message: "Password updated successfully",
@@ -135,10 +153,10 @@ export default class profileController {
       if (error instanceof errors.E_VALIDATION_ERROR) {
         return res.status(400).json({ error: error.messages });
       } else {
-        return res
-          .status(500)
-          .json({ status: 500, message: "Internal server error" });
+        return res.status(500).json({ status: 500, message: "Internal server error" });
       }
     }
   }
+  
+  
 }
