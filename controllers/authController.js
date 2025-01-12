@@ -102,50 +102,62 @@ class AuthController {
     }
   }
 
-  // Enable/Disable Two-Factor Authentication
-  static async toggleTwoFactorAuth(req, res) {
-    try {
-      const { enable } = req.body; // Enable or disable 2FA
-      const { id } = req.user;
-      console.log(id);
+// Enable/Disable Two-Factor Authentication
+static async toggleTwoFactorAuth(req, res) {
+  try {
+    const { enable, password } = req.body; // Include password in request body
+    const { id } = req.user;
 
-      if (enable) {
-        // Generate 2FA secret
-        const secret = speakeasy.generateSecret({ length: 20 });
-
-        // Update 2FA status
-        await prisma.user.update({
-          where: { id },
-          data: {
-            twoFactorEnabled: true,
-            twoFactorSecret: secret.base32,
-          },
-        });
-
-        return res.json({
-          status: 200,
-          message: "Two-Factor Authentication enabled",
-        });
-      } else {
-        // Disable 2FA
-        await prisma.user.update({
-          where: { id },
-          data: {
-            twoFactorEnabled: false,
-            twoFactorSecret: null,
-          },
-        });
-
-        return res.json({
-          status: 200,
-          message: "Two-Factor Authentication disabled",
-        });
-      }
-    } catch (error) {
-      console.error("Toggle 2FA Error:", error);
-      return res.status(500).json({ status: 500, message: "Internal server error" });
+    // Fetch user from the database
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ status: 404, message: "User not found" });
     }
+
+    // Verify the password provided by the user
+    const isMatch = bcrypt.compareSync(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ status: 400, message: "Incorrect password" });
+    }
+
+    if (enable) {
+      // Generate 2FA secret
+      const secret = speakeasy.generateSecret({ length: 20 });
+
+      // Update 2FA status in the database
+      await prisma.user.update({
+        where: { id },
+        data: {
+          twoFactorEnabled: true,
+          twoFactorSecret: secret.base32,
+        },
+      });
+
+      return res.json({
+        status: 200,
+        message: "Two-Factor Authentication enabled",
+      });
+    } else {
+      // Disable 2FA
+      await prisma.user.update({
+        where: { id },
+        data: {
+          twoFactorEnabled: false,
+          twoFactorSecret: null,
+        },
+      });
+
+      return res.json({
+        status: 200,
+        message: "Two-Factor Authentication disabled",
+      });
+    }
+  } catch (error) {
+    console.error("Toggle 2FA Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
   }
+}
+
 
   // Send OTP
   static async sendOtp(req, res) {
