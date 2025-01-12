@@ -9,8 +9,8 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
 
   
-  console.log("Authorization Header:", authHeader);
-  console.log("Extracted Token:", token);
+  // console.log("Authorization Header:", authHeader);
+  // console.log("Extracted Token:", token);
     if (!token) {
       return res.status(401).json({ status: 401, message: "Unauthorized" });
     }
