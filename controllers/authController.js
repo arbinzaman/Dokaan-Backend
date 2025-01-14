@@ -35,10 +35,12 @@ class AuthController {
         data: payload,
       });
 
+      const { password, twoFactorSecret, ...userWithoutSensitiveFields } = user;
+
       return res.json({
         status: 200,
         message: "User created successfully",
-        data: user,
+        data: userWithoutSensitiveFields,
       });
     } catch (error) {
       console.error("Register Error:", error);
@@ -57,7 +59,6 @@ class AuthController {
   static async login(req, res) {
     try {
       const { body } = req;
-      console.log(body);
 
       const validator = vine.compile(loginSchema);
       const payload = await validator.validate(body);
@@ -68,13 +69,17 @@ class AuthController {
       });
 
       if (!user) {
-        return res.status(400).json({ status: 400, message: "User does not exist" });
+        return res
+          .status(400)
+          .json({ status: 400, message: "User does not exist" });
       }
 
       // Compare password
       const isMatch = bcrypt.compareSync(payload.password, user.password);
       if (!isMatch) {
-        return res.status(400).json({ status: 400, message: "Incorrect password" });
+        return res
+          .status(400)
+          .json({ status: 400, message: "Incorrect password" });
       }
 
       // Issue JWT token
@@ -84,14 +89,16 @@ class AuthController {
         name: user.name,
         role: user.role,
       };
-      const token = jwt.sign(payloadData, process.env.JWT_SECRET, { expiresIn: "365d" });
+      const token = jwt.sign(payloadData, process.env.JWT_SECRET, {
+        expiresIn: "365d",
+      });
 
-      const { password, ...userWithoutPassword } = user;
+      const { password, twoFactorSecret, ...userWithoutSensitiveFields } = user;
 
       return res.json({
         status: 200,
         message: "Login successful",
-        user: userWithoutPassword,
+        user: userWithoutSensitiveFields,
         access_token: `Bearer ${token}`,
       });
     } catch (error) {
@@ -102,189 +109,107 @@ class AuthController {
     }
   }
 
-// Enable/Disable Two-Factor Authentication
-
-// static async toggleTwoFactorAuth(req, res) {
-//   try {
-//     const { enable, password } = req.body; // Include password in request body
-//     const { id } = req.user;
-
-//     // Fetch user from the database
-//     const user = await prisma.user.findUnique({ where: { id } });
-//     if (!user) {
-//       return res.status(404).json({ status: 404, message: "User not found" });
-//     }
-
-//     // Verify the password provided by the user
-//     const isMatch = bcrypt.compareSync(password, user.password);
-//     if (!isMatch) {
-//       return res.status(400).json({ status: 400, message: "Incorrect password" });
-//     }
-
-//     if (enable) {
-//       // Generate 2FA secret
-//       const secret = speakeasy.generateSecret({ length: 20 });
-
-//       // Update 2FA status in the database
-//       await prisma.user.update({
-//         where: { id },
-//         data: {
-//           twoFactorEnabled: true,
-//           twoFactorSecret: secret.base32,
-//         },
-//       });
-
-//       return res.json({
-//         status: 200,
-//         message: "Two-Factor Authentication enabled",
-//       });
-//     } else {
-//       // Disable 2FA
-//       await prisma.user.update({
-//         where: { id },
-//         data: {
-//           twoFactorEnabled: false,
-//           twoFactorSecret: null,
-//         },
-//       });
-
-//       return res.json({
-//         status: 200,
-//         message: "Two-Factor Authentication disabled",
-//       });
-//     }
-//   } catch (error) {
-//     console.error("Toggle 2FA Error:", error);
-//     return res.status(500).json({ status: 500, message: "Internal server error" });
-//   }
-// }
-
-
   // Send OTP
-  
-  
-// Send OTP
-static async sendOtp(req, res) {
-  try {
-    const { id, email } = req.user;
-    console.log(email);
+  static async sendOtp(req, res) {
+    try {
+      const { id, email } = req.user;
 
-    // Fetch user to get the 2FA secret (optional if not needed)
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) {
-      return res.status(404).json({
-        status: 404,
-        message: "User not found",
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, email: true }, // Exclude twoFactorSecret
       });
+
+      if (!user) {
+        return res
+          .status(404)
+          .json({ status: 404, message: "User not found" });
+      }
+
+      sendOtpMail(email, user);
+
+      return res.json({
+        status: 200,
+        message: "OTP sent successfully",
+      });
+    } catch (error) {
+      console.error("Send OTP Error:", error);
+      return res
+        .status(500)
+        .json({ status: 500, message: "Internal server error" });
     }
-
-    // Send OTP via email (the user’s 2FA status is no longer checked here)
-    sendOtpMail(email, user);
-
-    return res.json({
-      status: 200,
-      message: "OTP sent successfully",
-    });
-  } catch (error) {
-    console.error("Send OTP Error:", error);
-    return res.status(500).json({ status: 500, message: "Internal server error" });
   }
-}
 
- // Verify OTP and Toggle Two-Factor Authentication
-static async verifyOtp(req, res) {
-  try {
-    const { otp } = req.body;
-    const { id } = req.user;
+  // Verify OTP and Toggle Two-Factor Authentication
+  static async verifyOtp(req, res) {
+    try {
+      const { otp } = req.body;
+      const { id } = req.user;
 
-    // Fetch user's 2FA secret
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) {
-      return res.status(404).json({
-        status: 404,
-        message: "User not found",
+      const user = await prisma.user.findUnique({
+        where: { id },
       });
-    }
 
- 
-    // Verify OTP
-    const isValidOtp = verifyOtp(otp, user);
-    if (!isValidOtp) {
-      return res.status(400).json({
-        status: 400,
-        message: "Invalid OTP",
+      if (!user) {
+        return res
+          .status(404)
+          .json({ status: 404, message: "User not found" });
+      }
+
+      const isValidOtp = verifyOtp(otp, user);
+      if (!isValidOtp) {
+        return res
+          .status(400)
+          .json({ status: 400, message: "Invalid OTP" });
+      }
+
+      await prisma.user.update({
+        where: { id },
+        data: { twoFactorEnabled: true },
       });
+
+      return res.json({
+        status: 200,
+        message: "OTP verified and Two-Factor Authentication enabled",
+      });
+    } catch (error) {
+      console.error("Verify OTP Error:", error);
+      return res
+        .status(500)
+        .json({ status: 500, message: "Internal server error" });
     }
-
-    // If OTP is valid, enable 2FA in the database
-    await prisma.user.update({
-      where: { id },
-      data: {
-        twoFactorEnabled: true,
-      },
-    });
-
-    return res.json({
-      status: 200,
-      message: "OTP verified and Two-Factor Authentication enabled",
-      twoFactorEnabled: true,
-    });
-  } catch (error) {
-    console.error("Verify OTP and Enable 2FA Error:", error);
-    return res.status(500).json({ status: 500, message: "Internal server error" });
   }
-}
 
+  // Disable Two-Factor Authentication
+  static async disableTwoFactorAuth(req, res) {
+    try {
+      const { id } = req.user;
 
-
-
-
-
-
-
-
-// Disable Two-Factor Authentication
-static async disableTwoFactorAuth(req, res) {
-  try {
-    const { id } = req.user; // Get user ID from the authenticated request
-
-    // Fetch user from the database
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) {
-      return res.status(404).json({
-        status: 404,
-        message: "User not found",
+      const user = await prisma.user.findUnique({
+        where: { id },
       });
-    }
 
-    // Check if 2FA is already disabled
-    if (!user.twoFactorEnabled) {
-      return res.status(400).json({
-        status: 400,
-        message: "Two-Factor Authentication is already disabled",
+      if (!user || !user.twoFactorEnabled) {
+        return res
+          .status(400)
+          .json({ status: 400, message: "Two-Factor Authentication is not enabled" });
+      }
+
+      await prisma.user.update({
+        where: { id },
+        data: { twoFactorEnabled: false, twoFactorSecret: null },
       });
+
+      return res.json({
+        status: 200,
+        message: "Two-Factor Authentication disabled",
+      });
+    } catch (error) {
+      console.error("Disable 2FA Error:", error);
+      return res
+        .status(500)
+        .json({ status: 500, message: "Internal server error" });
     }
-
-    // Update the database to disable 2FA
-    await prisma.user.update({
-      where: { id },
-      data: {
-        twoFactorEnabled: false,
-        twoFactorSecret: null, // Remove the secret as 2FA is disabled
-      },
-    });
-
-    return res.json({
-      status: 200,
-      message: "Two-Factor Authentication disabled",
-    });
-  } catch (error) {
-    console.error("Disable 2FA Error:", error);
-    return res.status(500).json({ status: 500, message: "Internal server error" });
   }
-}
-
-
 }
 
 export default AuthController;

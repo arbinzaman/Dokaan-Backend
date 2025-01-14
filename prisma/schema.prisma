@@ -15,14 +15,29 @@ datasource db {
 
 
 model User {
-  id        BigInt   @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  password  String?
-  role      String?
-  profileImageUrl   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  twoFactorEnabled Boolean  @default(false) // Flag to check if 2FA is enabled
-  twoFactorSecret  String?                // Secret key for 2FA
+  id               BigInt   @id @default(autoincrement()) // BigInt for auto-increment
+  email            String   @unique
+  name             String?
+  password         String?
+  role             String?
+  profileImageUrl  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?
+
+  devices          Device[] @relation("UserDevices")
 }
+
+model Device {
+  id       BigInt     @id @default(autoincrement()) @db.BigInt
+  userId   BigInt  
+  device   String
+  browser  String
+  os       String
+  user     User    @relation("UserDevices", fields: [userId], references: [id])
+}
+
+
+
+
