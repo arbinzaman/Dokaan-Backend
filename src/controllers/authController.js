@@ -3,7 +3,6 @@ import vine, { errors } from "@vinejs/vine";
 import { registerSchema, loginSchema } from "../validation/authValidation.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import speakeasy from "speakeasy";
 import { sendOtpMail, verifyOtp } from "../services/auth.services.js";
 
 class AuthController {
