@@ -7,8 +7,9 @@ const router = Router();
 
 router.post("/signup", AuthController.register);
 router.post("/login", AuthController.login);
-router.put("/two-factor-auth", authMiddleware, AuthController.toggleTwoFactorAuth);
+// router.put("/two-factor-auth", authMiddleware, AuthController.toggleTwoFactorAuth);
 router.post("/send-otp", authMiddleware, AuthController.sendOtp);
 router.post("/verify-otp", authMiddleware, AuthController.verifyOtp);
+router.post("/disable-2fa", authMiddleware, AuthController.disableTwoFactorAuth);
 
 export default router;

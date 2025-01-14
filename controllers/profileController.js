@@ -26,17 +26,17 @@ export default class profileController {
       const { id } = req.params;
       const { name, email } = req.body;
       let profileImageUrl = null;
-
+  
       // Handle profile image upload
       if (req.files && req.files.profileImageUrl) {
         const profile = req.files.profileImageUrl;
-
+  
         // Validate image
         const validationError = imageValidator(profile.size, profile.mimetype);
         if (validationError) {
           return res.status(400).json({ status: 400, message: validationError });
         }
-
+  
         // Generate filename and upload to Cloudinary
         const fileName = generateFileName() + "." + profile.name.split(".").pop();
         const uploadResult = await cloudinary.uploader.upload(profile.tempFilePath, {
@@ -45,7 +45,7 @@ export default class profileController {
         });
         profileImageUrl = uploadResult.secure_url;
       }
-
+  
       // Update user data in the database
       const updatedUser = await Prisma.user.update({
         where: { id: Number(id) },
@@ -60,9 +60,11 @@ export default class profileController {
           email: true,
           profileImageUrl: true,
           role: true,
+          twoFactorEnabled: true, // Include twoFactorEnabled in the response
+          // twoFactorSecret: true,  // Include twoFactorSecret in the response
         },
       });
-
+  
       return res.json({
         status: 200,
         message: "Profile updated successfully",
@@ -75,6 +77,7 @@ export default class profileController {
         .json({ status: 500, message: "Internal server error" });
     }
   }
+  
 
   static async deleteProfile(req, res) {
     try {

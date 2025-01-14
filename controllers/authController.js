@@ -4,7 +4,7 @@ import { registerSchema, loginSchema } from "../validation/authValidation.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import speakeasy from "speakeasy";
-import transporter from "../config/email.config.js";
+import { sendOtpMail, verifyOtp } from "../services/auth.services.js";
 
 class AuthController {
   // Register User
@@ -103,153 +103,188 @@ class AuthController {
   }
 
 // Enable/Disable Two-Factor Authentication
-static async toggleTwoFactorAuth(req, res) {
-  try {
-    const { enable, password } = req.body; // Include password in request body
-    const { id } = req.user;
 
-    // Fetch user from the database
+// static async toggleTwoFactorAuth(req, res) {
+//   try {
+//     const { enable, password } = req.body; // Include password in request body
+//     const { id } = req.user;
+
+//     // Fetch user from the database
+//     const user = await prisma.user.findUnique({ where: { id } });
+//     if (!user) {
+//       return res.status(404).json({ status: 404, message: "User not found" });
+//     }
+
+//     // Verify the password provided by the user
+//     const isMatch = bcrypt.compareSync(password, user.password);
+//     if (!isMatch) {
+//       return res.status(400).json({ status: 400, message: "Incorrect password" });
+//     }
+
+//     if (enable) {
+//       // Generate 2FA secret
+//       const secret = speakeasy.generateSecret({ length: 20 });
+
+//       // Update 2FA status in the database
+//       await prisma.user.update({
+//         where: { id },
+//         data: {
+//           twoFactorEnabled: true,
+//           twoFactorSecret: secret.base32,
+//         },
+//       });
+
+//       return res.json({
+//         status: 200,
+//         message: "Two-Factor Authentication enabled",
+//       });
+//     } else {
+//       // Disable 2FA
+//       await prisma.user.update({
+//         where: { id },
+//         data: {
+//           twoFactorEnabled: false,
+//           twoFactorSecret: null,
+//         },
+//       });
+
+//       return res.json({
+//         status: 200,
+//         message: "Two-Factor Authentication disabled",
+//       });
+//     }
+//   } catch (error) {
+//     console.error("Toggle 2FA Error:", error);
+//     return res.status(500).json({ status: 500, message: "Internal server error" });
+//   }
+// }
+
+
+  // Send OTP
+  
+  
+// Send OTP
+static async sendOtp(req, res) {
+  try {
+    const { id, email } = req.user;
+    console.log(email);
+
+    // Fetch user to get the 2FA secret (optional if not needed)
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
-      return res.status(404).json({ status: 404, message: "User not found" });
-    }
-
-    // Verify the password provided by the user
-    const isMatch = bcrypt.compareSync(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ status: 400, message: "Incorrect password" });
-    }
-
-    if (enable) {
-      // Generate 2FA secret
-      const secret = speakeasy.generateSecret({ length: 20 });
-
-      // Update 2FA status in the database
-      await prisma.user.update({
-        where: { id },
-        data: {
-          twoFactorEnabled: true,
-          twoFactorSecret: secret.base32,
-        },
-      });
-
-      return res.json({
-        status: 200,
-        message: "Two-Factor Authentication enabled",
-      });
-    } else {
-      // Disable 2FA
-      await prisma.user.update({
-        where: { id },
-        data: {
-          twoFactorEnabled: false,
-          twoFactorSecret: null,
-        },
-      });
-
-      return res.json({
-        status: 200,
-        message: "Two-Factor Authentication disabled",
+      return res.status(404).json({
+        status: 404,
+        message: "User not found",
       });
     }
+
+    // Send OTP via email (the user’s 2FA status is no longer checked here)
+    sendOtpMail(email, user);
+
+    return res.json({
+      status: 200,
+      message: "OTP sent successfully",
+    });
   } catch (error) {
-    console.error("Toggle 2FA Error:", error);
+    console.error("Send OTP Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
+  }
+}
+
+ // Verify OTP and Toggle Two-Factor Authentication
+static async verifyOtp(req, res) {
+  try {
+    const { otp } = req.body;
+    const { id } = req.user;
+
+    // Fetch user's 2FA secret
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        message: "User not found",
+      });
+    }
+
+ 
+    // Verify OTP
+    const isValidOtp = verifyOtp(otp, user);
+    if (!isValidOtp) {
+      return res.status(400).json({
+        status: 400,
+        message: "Invalid OTP",
+      });
+    }
+
+    // If OTP is valid, enable 2FA in the database
+    await prisma.user.update({
+      where: { id },
+      data: {
+        twoFactorEnabled: true,
+      },
+    });
+
+    return res.json({
+      status: 200,
+      message: "OTP verified and Two-Factor Authentication enabled",
+      twoFactorEnabled: true,
+    });
+  } catch (error) {
+    console.error("Verify OTP and Enable 2FA Error:", error);
     return res.status(500).json({ status: 500, message: "Internal server error" });
   }
 }
 
 
-  // Send OTP
-  static async sendOtp(req, res) {
-    try {
-      const { id, email } = req.user;
-      console.log(email);
 
-      // Fetch user's 2FA secret
-      const user = await prisma.user.findUnique({ where: { id } });
-      if (!user || !user.twoFactorEnabled) {
-        return res.status(400).json({
-          status: 400,
-          message: "Two-Factor Authentication is not enabled",
-        });
-      }
 
-      // Generate OTP
-      const otp = speakeasy.totp({
-        secret: user.twoFactorSecret,
-        encoding: "base32",
-        digits: 6,
+
+
+
+
+
+// Disable Two-Factor Authentication
+static async disableTwoFactorAuth(req, res) {
+  try {
+    const { id } = req.user; // Get user ID from the authenticated request
+
+    // Fetch user from the database
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        message: "User not found",
       });
-
-      // Send OTP via email
-      await transporter.sendMail({
-        from: `"Dokaan Support Team" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: "Your One-Time Password (OTP) for Secure Access",
-        text: `Dear User,
-      
-We have generated a One-Time Password (OTP) to verify your login or perform a secure action. 
-      
-Your OTP Code: ${otp}
-      
-This code is valid for a limited time only. Please use it promptly to complete the verification process. 
-      
-If you did not request this code, please disregard this email or contact our support team immediately.
-      
-Best regards,  
-The Dokaan Support Team`,
-      });
-      
-
-      return res.json({
-        status: 200,
-        message: "OTP sent successfully",
-      });
-    } catch (error) {
-      console.error("Send OTP Error:", error);
-      return res.status(500).json({ status: 500, message: "Internal server error" });
     }
-  }
 
-  // Verify OTP
-  static async verifyOtp(req, res) {
-    try {
-      const { otp } = req.body;
-      const { id } = req.user;
-
-      // Fetch user's 2FA secret
-      const user = await prisma.user.findUnique({ where: { id } });
-      if (!user || !user.twoFactorEnabled) {
-        return res.status(400).json({
-          status: 400,
-          message: "Two-Factor Authentication is not enabled",
-        });
-      }
-
-      // Verify OTP
-      const isValid = speakeasy.totp.verify({
-        secret: user.twoFactorSecret,
-        encoding: "base32",
-        token: otp,
-        window: 1,
+    // Check if 2FA is already disabled
+    if (!user.twoFactorEnabled) {
+      return res.status(400).json({
+        status: 400,
+        message: "Two-Factor Authentication is already disabled",
       });
-
-      if (!isValid) {
-        return res.status(400).json({
-          status: 400,
-          message: "Invalid OTP",
-        });
-      }
-
-      return res.json({
-        status: 200,
-        message: "OTP verified successfully",
-      });
-    } catch (error) {
-      console.error("Verify OTP Error:", error);
-      return res.status(500).json({ status: 500, message: "Internal server error" });
     }
+
+    // Update the database to disable 2FA
+    await prisma.user.update({
+      where: { id },
+      data: {
+        twoFactorEnabled: false,
+        twoFactorSecret: null, // Remove the secret as 2FA is disabled
+      },
+    });
+
+    return res.json({
+      status: 200,
+      message: "Two-Factor Authentication disabled",
+    });
+  } catch (error) {
+    console.error("Disable 2FA Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
   }
+}
+
+
 }
 
 export default AuthController;
