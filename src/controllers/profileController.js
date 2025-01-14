@@ -4,6 +4,8 @@ import Prisma from "../config/db.config.js";
 import cloudinary from "../config/cloudinary.config.js";
 import { updatePasswordSchema } from "../validation/authValidation.js";
 import bcrypt from "bcryptjs";
+
+
 export default class profileController {
   static async getProfile(req, res) {
     try {
