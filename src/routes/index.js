@@ -3,11 +3,14 @@ import userRoutes from "./userRoutes.js";
 import authRoutes from "./authRoutes.js";
 import profileRoutes from "./profileRoutes.js";
 // import transporter from "../config/email.config.js";
+import dokaanRoutes from "./dokaanRoutes.js";
+
 const router = Router();
 
 router.use("/api/v1/user", userRoutes);
 router.use("/api/v1/auth", authRoutes);
 router.use("/api/v1/profile", profileRoutes);
+router.use("/api/v1/dokaan", dokaanRoutes);
 
 // router.post('/send-email', async (req, res) => {
 //     const { to, subject, text, html } = req.body;

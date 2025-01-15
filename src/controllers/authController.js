@@ -10,47 +10,65 @@ class AuthController {
   static async register(req, res) {
     try {
       const { body } = req;
-
+  
       const validator = vine.compile(registerSchema);
       const payload = await validator.validate(body);
-
+  
       // Check if user already exists
       const userExist = await prisma.user.findFirst({
         where: { email: payload.email },
       });
-
+  
       if (userExist) {
         return res
           .status(400)
           .json({ status: 400, message: "User already exists" });
       }
-
-      // Encrypt password
-      const salt = bcrypt.genSaltSync(10);
-      payload.password = bcrypt.hashSync(payload.password, salt);
-
-      // Create user
+  
+      // Encrypt password if provided
+      if (payload.password) {
+        const salt = bcrypt.genSaltSync(10);
+        payload.password = bcrypt.hashSync(payload.password, salt);
+      }
+  
+      // Create user without password if it's missing
       const user = await prisma.user.create({
         data: payload,
       });
-
+  
+      // Issue JWT token
+      const tokenPayload = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      };
+      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "365d",
+      });
+  
+      // Remove sensitive data from response
+      const { password, twoFactorSecret, ...userWithoutSensitiveData } = user;
+  
       return res.json({
         status: 200,
         message: "User created successfully",
-        data: user,
+        user: userWithoutSensitiveData,
+        access_token: `Bearer ${token}`,
       });
     } catch (error) {
       console.error("Register Error:", error);
-
+  
       if (error instanceof errors.E_VALIDATION_ERROR) {
         return res.status(400).json({ status: 400, error: error.messages });
       }
-
+  
       return res
         .status(500)
         .json({ status: 500, message: "Internal server error" });
     }
   }
+  
 
   // Login User
   static async login(req, res) {

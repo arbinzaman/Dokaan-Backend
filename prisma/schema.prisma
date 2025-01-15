@@ -13,31 +13,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id               BigInt   @id @default(autoincrement()) // BigInt for auto-increment
+  id               BigInt   @id @default(autoincrement())
   email            String   @unique
   name             String?
   password         String?
-  role             String?
+  role             String?   // "owner", "employee", etc.
   profileImageUrl  String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   twoFactorEnabled Boolean  @default(false)
   twoFactorSecret  String?
 
-  devices          Device[] @relation("UserDevices")
+  // Relations for Shops
+  dokaanOwned      Dokaan[] @relation("DokaanOwnerRelation")
+  dokaanEmployment Dokaan?  @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])
+
+  // Additional Fields for Employees
+  dokaanId         BigInt?  // Nullable if the user is not an employee
+  shopRole         String?  // Role within the shop (e.g., "manager", "cashier")
 }
 
-model Device {
-  id       BigInt     @id @default(autoincrement()) @db.BigInt
-  userId   BigInt  
-  device   String
-  browser  String
-  os       String
-  user     User    @relation("UserDevices", fields: [userId], references: [id])
+model Dokaan {
+  id                     BigInt   @id @default(autoincrement())
+  dokaan_name            String
+  dokaan_location        String
+  dokaan_imageUrl        String?
+  dokaan_Tin_Certificate Int?
+  dokaan_email           String
+  dokaan_phone           String?
+  dokaan_type            String?
+  ownerId                BigInt
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  owner                  User     @relation("DokaanOwnerRelation", fields: [ownerId], references: [id])
+  employees              User[]   @relation("DokaanEmployeeRelation")
 }
-
-
-
-
