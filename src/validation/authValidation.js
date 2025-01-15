@@ -1,5 +1,5 @@
 import vine from '@vinejs/vine'
-import {CustomErrorReporter} from '../validation/customErrorReporter.js'
+import {CustomErrorReporter} from './customErrorReporter.js';
 
 // custom error reporter
 vine.errorReporter = () => new CustomErrorReporter();

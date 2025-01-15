@@ -13,16 +13,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id        BigInt   @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  password  String?
-  role      String?
-  profileImageUrl   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  twoFactorEnabled Boolean  @default(false) // Flag to check if 2FA is enabled
-  twoFactorSecret  String?                // Secret key for 2FA
+  id               BigInt   @id @default(autoincrement())
+  email            String   @unique
+  name             String?
+  password         String?
+  role             String?   // "owner", "employee", etc.
+  profileImageUrl  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?
+
+  // Relations for Shops
+  dokaanOwned      Dokaan[] @relation("DokaanOwnerRelation")
+  dokaanEmployment Dokaan?  @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])
+
+  // Additional Fields for Employees
+  dokaanId         BigInt?  // Nullable if the user is not an employee
+  shopRole         String?  // Role within the shop (e.g., "manager", "cashier")
+}
+
+model Dokaan {
+  id                     BigInt   @id @default(autoincrement())
+  dokaan_name            String
+  dokaan_location        String
+  dokaan_imageUrl        String?
+  dokaan_Tin_Certificate Int?
+  dokaan_email           String
+  dokaan_phone           String?
+  dokaan_type            String?
+  ownerId                BigInt
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  owner                  User     @relation("DokaanOwnerRelation", fields: [ownerId], references: [id])
+  employees              User[]   @relation("DokaanEmployeeRelation")
 }
