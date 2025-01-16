@@ -70,54 +70,60 @@ class AuthController {
   }
   
 
-  // Login User
-  static async login(req, res) {
-    try {
-      const { body } = req;
+// Login User
+static async login(req, res) {
+  try {
+    const { body } = req;
 
-      const validator = vine.compile(loginSchema);
-      const payload = await validator.validate(body);
+    const validator = vine.compile(loginSchema);
+    const payload = await validator.validate(body);
 
-      // Check if user exists
-      const user = await prisma.user.findUnique({
-        where: { email: payload.email },
-      });
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { email: payload.email },
+    });
 
-      if (!user) {
-        return res.status(400).json({ status: 400, message: "User does not exist" });
-      }
-
-      // Compare password
-      const isMatch = bcrypt.compareSync(payload.password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ status: 400, message: "Incorrect password" });
-      }
-
-      // Issue JWT token
-      const payloadData = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      };
-      const token = jwt.sign(payloadData, process.env.JWT_SECRET, { expiresIn: "365d" });
-
-      // Remove password and OTP secret from the user object
-      const { password, twoFactorSecret, ...userWithoutSensitiveData } = user;
-
-      return res.json({
-        status: 200,
-        message: "Login successful",
-        user: userWithoutSensitiveData,
-        access_token: `Bearer ${token}`,
-      });
-    } catch (error) {
-      console.error("Login Error:", error);
-      return res
-        .status(500)
-        .json({ status: 500, message: "Internal server error" });
+    if (!user) {
+      return res.status(400).json({ status: 400, message: "User does not exist" });
     }
+
+    // Compare password
+    const isMatch = bcrypt.compareSync(payload.password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ status: 400, message: "Incorrect password" });
+    }
+
+    // Fetch dokaan data for the user
+    const dokaan = await prisma.dokaan.findFirst({
+      where: { ownerId: user.id }, // Assuming dokaan has a foreign key `ownerId`
+    });
+
+    // Issue JWT token
+    const payloadData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+    const token = jwt.sign(payloadData, process.env.JWT_SECRET, { expiresIn: "365d" });
+
+    // Remove sensitive fields
+    const { password, twoFactorSecret, ...userWithoutSensitiveData } = user;
+
+    return res.json({
+      status: 200,
+      message: "Login successful",
+      user: userWithoutSensitiveData,
+      dokaan,
+      access_token: `Bearer ${token}`,
+    });
+  } catch (error) {
+    console.error("Login Error:", error);
+    return res
+      .status(500)
+      .json({ status: 500, message: "Internal server error" });
   }
+}
 
   // Send OTP
   static async sendOtp(req, res) {

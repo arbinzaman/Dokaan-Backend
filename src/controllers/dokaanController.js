@@ -18,8 +18,8 @@ import {
         const { dokaan, user, access_token } = await createDokaanWithNewOwner(data);
   
         // Send response
-        return res.status(201).json({
-          status: 201,
+        return res.status(200).json({
+          status: 200,
           message: "Dokaan and owner created successfully",
           data: {
             dokaan,

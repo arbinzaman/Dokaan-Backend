@@ -61,6 +61,7 @@ export const createDokaanWithNewOwner = async (data) => {
 };
 
 
+
 export const updateDokaan = async (id, data) => {
   return await prisma.dokaan.update({
     where: { id: BigInt(id) },
