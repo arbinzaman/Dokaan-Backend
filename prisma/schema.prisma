@@ -24,7 +24,8 @@ model User {
   updatedAt        DateTime @updatedAt
   twoFactorEnabled Boolean  @default(false)
   twoFactorSecret  String?
-
+  subscription     String?  // "free", "pro", etc.
+  subscriptionStatus Boolean? // "active", "canceled", etc.
   // Relations for Shops
   dokaanOwned      Dokaan[] @relation("DokaanOwnerRelation")
   dokaanEmployment Dokaan?  @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])

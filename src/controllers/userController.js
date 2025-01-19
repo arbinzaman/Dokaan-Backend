@@ -97,18 +97,31 @@ export const updateUser = async (req, res) => {
   }
 };
 
+
+
+
 // Delete user
+// In userController.js 
 export const deleteUser = async (req, res) => {
   const { id } = req.params;
 
   try {
-    await Prisma.user.delete({
-      where: {
-        id: parseInt(id),
-      },
-    });
-    res.json({ message: "User deleted" });
+      // Delete all Dokaan records associated with the user
+      await Prisma.dokaan.deleteMany({
+          where: {
+              ownerId: parseInt(id),
+          },
+      });
+
+      // Delete the user
+      await Prisma.user.delete({
+          where: {
+              id: parseInt(id),
+          },
+      });
+
+      res.json({ message: "User deleted" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message });
   }
 };
