@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import speakeasy from "speakeasy";
 import { registerSchema, loginSchema } from "../validation/authValidation.js";
 import prisma from "../config/db.config.js";// Import other service functions
+import vine from "@vinejs/vine";
+
 
 // Register User Service
 export const registerUser = async (payload) => {
