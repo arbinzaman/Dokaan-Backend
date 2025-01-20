@@ -1,5 +1,5 @@
 import {
-    createDokaan,
+    createDokaanWithNewOwner,
     updateDokaan,
     deleteDokaan,
     getAllDokaans,
@@ -13,25 +13,46 @@ import {
     static async create(req, res) {
       try {
         const data = req.body;
-        const dokaan = await createDokaan(data);
-        return res.status(201).json({ status: 201, data: dokaan });
+  
+        // Call service function to create Dokaan and owner
+        const { dokaan, user, access_token } = await createDokaanWithNewOwner(data);
+  
+        // Send response
+        return res.status(200).json({
+          status: 200,
+          message: "Dokaan and owner created successfully",
+          data: {
+            dokaan,
+            owner: user,
+          },
+          access_token,
+        });
       } catch (error) {
         console.error("Create Dokaan Error:", error);
-        return res.status(500).json({ status: 500, message: "Internal Server Error" });
+        return res.status(500).json({
+          status: 500,
+          message: "Internal Server Error",
+        });
       }
     }
+  
   
     static async update(req, res) {
       try {
         const { id } = req.params;
         const data = req.body;
-        const dokaan = await updateDokaan(id, data);
+        const files = req.files;
+        // console.log("Files received:", req.files);
+
+    
+        const dokaan = await updateDokaan(id, data, files);
         return res.json({ status: 200, data: dokaan });
       } catch (error) {
         console.error("Update Dokaan Error:", error);
         return res.status(500).json({ status: 500, message: "Internal Server Error" });
       }
     }
+    
   
     static async delete(req, res) {
       try {
