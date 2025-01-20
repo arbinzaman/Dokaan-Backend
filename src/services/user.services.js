@@ -1,12 +1,36 @@
-import Prisma from "../config/db.config.js";
-import bcrypt from "bcryptjs"; 
+// services/userService.js
+import  prisma  from "../config/db.config.js";
+import bcrypt from "bcryptjs";
 
-export const createAUser = async (userData) => {
+// Get all users
+export const getUsersService = async () => {
+  const users = await prisma.user.findMany();
+  return users;
+};
+
+// Get user by ID
+export const getUserByIdService = async (id) => {
+  const user = await prisma.user.findUnique({
+    where: { id: parseInt(id) }
+  });
+  return user;
+};
+
+// Get user by Email
+export const getUserByEmailService = async (email) => {
+  const user = await prisma.user.findUnique({
+    where: { email }
+  });
+  return user;
+};
+
+// Create user
+export const createUserService = async (userData) => {
   const { name, email, password, role } = userData;
 
   // Check if the user already exists
-  const existingUser = await Prisma.user.findUnique({
-    where: { email },
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
   });
 
   if (existingUser) {
@@ -14,47 +38,28 @@ export const createAUser = async (userData) => {
   }
 
   // Hash the password
-  const salt = await bcrypt.genSalt(10); 
+  const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
   // Create a new user
-  const newUser = await Prisma.user.create({
+  const newUser = await prisma.user.create({
     data: {
       name,
       email,
       password: hashedPassword,
-      role,
-    },
+      role
+    }
   });
 
   return newUser;
 };
 
-export const getAllUsers = async () => {
-  const users = await Prisma.user.findMany();
-  return users;
-};
-
-export const getUserByIdQuery = async (userId) => {
-  const user = await Prisma.user.findUnique({
-    where: { id: parseInt(userId) },
-  });
-  return user;
-};
-
-export const getUserByEmailQuery = async (userEmail) => {
-  const user = await Prisma.user.findUnique({
-    where: { email: userEmail },
-  });
-  return user;
-};
-
-export const updateAUser = async (userId, userData) => {
+// Update user
+export const updateUserService = async (id, userData) => {
   const { name, email, password, role } = userData;
 
-  // Check if the user exists
-  const existingUser = await Prisma.user.findUnique({
-    where: { id: parseInt(userId) },
+  const existingUser = await prisma.user.findUnique({
+    where: { id: parseInt(id) }
   });
 
   if (!existingUser) {
@@ -63,47 +68,63 @@ export const updateAUser = async (userId, userData) => {
 
   const updatedData = {};
 
-  if (name) {
-    updatedData.name = name;
-  }
-
-  if (email) {
-    updatedData.email = email;
-  }
-
+  if (name) updatedData.name = name;
+  if (email) updatedData.email = email;
   if (password) {
     const salt = await bcrypt.genSalt(10);
     updatedData.password = await bcrypt.hash(password, salt);
   }
+  if (role) updatedData.role = role;
 
-  if (role) {
-    updatedData.role = role;
-  }
-
-  const updatedUser = await Prisma.user.update({
-    where: { id: parseInt(userId) },
-    data: updatedData,
+  const updatedUser = await prisma.user.update({
+    where: { id: parseInt(id) },
+    data: updatedData
   });
 
   return updatedUser;
 };
 
-export const deleteAUser = async (userId) => {
-  // Check if the user exists
-  try {
-    // Delete associated Dokaans first
-    await prisma.dokaan.deleteMany({ 
-      where: { ownerId: userId } 
-    });
+// Delete user
+export const deleteUserService = async (id) => {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: parseInt(id) }
+  });
 
-    // Delete the user
-    const deletedUser = await prisma.user.delete({ 
-      where: { id: userId } 
-    });
-
-    return deletedUser; 
-  } catch (error) {
-    console.error("Error deleting user:", error);
-    throw error; 
+  if (!existingUser) {
+    throw new Error("User not found");
   }
+
+  // Delete the user
+  const deletedUser = await prisma.user.delete({
+    where: { id: parseInt(id) }
+  });
+
+  return deletedUser;
+};
+
+// Get user growth data (monthly)
+export const getUserGrowthDataService = async () => {
+  const users = await prisma.user.findMany({
+    select: {
+      createdAt: true
+    }
+  });
+
+  const userGrowth = {};
+
+  users.forEach((user) => {
+    const month = user.createdAt.toLocaleString("default", { month: "short" });
+    if (!userGrowth[month]) {
+      userGrowth[month] = 0;
+    }
+    userGrowth[month]++;
+  });
+
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const growthData = months.map((month) => ({
+    month,
+    users: userGrowth[month] || 0
+  }));
+
+  return growthData;
 };

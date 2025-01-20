@@ -1,16 +1,18 @@
+// controllers/userController.js
 import { 
-  createAUser, 
-  getAllUsers, 
-  getUserByIdQuery, 
-  getUserByEmailQuery, 
-  updateAUser, 
-  deleteAUser 
-} from '../services/user.services.js'; 
+  createUserService, 
+  getUsersService, 
+  getUserByIdService, 
+  getUserByEmailService, 
+  updateUserService, 
+  deleteUserService,
+  getUserGrowthDataService
+} from '../services/user.services.js';
 
 // Get all users
 export const getUsers = async (req, res) => {
   try {
-    const users = await getAllUsers(); 
+    const users = await getUsersService();
     res.status(200).json({ 
       status: 'success', 
       message: 'Users fetched successfully', 
@@ -25,12 +27,12 @@ export const getUsers = async (req, res) => {
   }
 };
 
-// Get user by id
+// Get user by ID
 export const getUserById = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const user = await getUserByIdQuery(id); 
+    const user = await getUserByIdService(id);
     if (user) {
       res.status(200).json({ 
         status: 'success', 
@@ -57,7 +59,7 @@ export const getUserByEmail = async (req, res) => {
   const { email } = req.params;
 
   try {
-    const user = await getUserByEmailQuery(email); 
+    const user = await getUserByEmailService(email);
     if (user) {
       res.status(200).json({ 
         status: 'success', 
@@ -82,7 +84,7 @@ export const getUserByEmail = async (req, res) => {
 // Create user
 export const createUser = async (req, res) => {
   try {
-    const newUser = await createAUser(req.body); 
+    const newUser = await createUserService(req.body);
     res.status(201).json({ 
       status: 'success', 
       message: 'User created successfully', 
@@ -99,8 +101,9 @@ export const createUser = async (req, res) => {
 // Update user
 export const updateUser = async (req, res) => {
   const { id } = req.params;
+
   try {
-    const updatedUser = await updateAUser(id, req.body); 
+    const updatedUser = await updateUserService(id, req.body);
     res.status(200).json({ 
       status: 'success', 
       message: 'User updated successfully', 
@@ -110,7 +113,7 @@ export const updateUser = async (req, res) => {
     res.status(400).json({ 
       status: 'error', 
       message: error.message 
-    }); 
+    });
   }
 };
 
@@ -119,11 +122,29 @@ export const deleteUser = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const deletedUser = await deleteUser(id); 
+    const deletedUser = await deleteUserService(id);
     res.status(200).json({ 
       status: 'success', 
       message: 'User deleted successfully', 
       data: deletedUser 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Internal Server Error', 
+      error: error.message 
+    });
+  }
+};
+
+// Get user growth data
+export const getUserGrowthData = async (req, res) => {
+  try {
+    const growthData = await getUserGrowthDataService();
+    res.status(200).json({ 
+      status: 'success', 
+      message: 'User growth data fetched successfully', 
+      data: growthData 
     });
   } catch (error) {
     res.status(500).json({ 
