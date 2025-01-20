@@ -90,18 +90,20 @@ export const updateAUser = async (userId, userData) => {
 
 export const deleteAUser = async (userId) => {
   // Check if the user exists
-  const existingUser = await Prisma.user.findUnique({
-    where: { id: parseInt(userId) },
-  });
+  try {
+    // Delete associated Dokaans first
+    await prisma.dokaan.deleteMany({ 
+      where: { ownerId: userId } 
+    });
 
-  if (!existingUser) {
-    throw new Error("User not found");
+    // Delete the user
+    const deletedUser = await prisma.user.delete({ 
+      where: { id: userId } 
+    });
+
+    return deletedUser; 
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    throw error; 
   }
-
-  // Delete the user
-  await Prisma.user.delete({
-    where: { id: parseInt(userId) },
-  });
-
-  return { message: "User deleted" };
 };

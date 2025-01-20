@@ -117,16 +117,19 @@ export const updateUser = async (req, res) => {
 // Delete user
 export const deleteUser = async (req, res) => {
   const { id } = req.params;
+
   try {
-    const result = await deleteAUser(id); 
+    const deletedUser = await deleteUser(id); 
     res.status(200).json({ 
       status: 'success', 
-      message: 'User deleted successfully' 
+      message: 'User deleted successfully', 
+      data: deletedUser 
     });
   } catch (error) {
-    res.status(400).json({ 
+    res.status(500).json({ 
       status: 'error', 
-      message: error.message 
-    }); 
+      message: 'Internal Server Error', 
+      error: error.message 
+    });
   }
 };

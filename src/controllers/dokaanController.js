@@ -41,13 +41,18 @@ import {
       try {
         const { id } = req.params;
         const data = req.body;
-        const dokaan = await updateDokaan(id, data);
+        const files = req.files;
+        // console.log("Files received:", req.files);
+
+    
+        const dokaan = await updateDokaan(id, data, files);
         return res.json({ status: 200, data: dokaan });
       } catch (error) {
         console.error("Update Dokaan Error:", error);
         return res.status(500).json({ status: 500, message: "Internal Server Error" });
       }
     }
+    
   
     static async delete(req, res) {
       try {

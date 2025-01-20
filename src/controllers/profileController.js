@@ -28,6 +28,7 @@ export default class profileController {
       const { id } = req.params;
       const { name, email } = req.body;
       let profileImageUrl = null;
+      // console.log(req.body);
   
       // Handle profile image upload
       if (req.files && req.files.profileImageUrl) {
