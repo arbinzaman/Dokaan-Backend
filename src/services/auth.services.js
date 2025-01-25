@@ -68,6 +68,13 @@ export const loginUser = async (payload) => {
     throw new Error("Incorrect password");
   }
 
+
+  // Fetch or create Dokaan info
+  let dokaan = await prisma.dokaan.findFirst({
+    where: { ownerId: user.id },
+  });
+
+
   // Issue JWT token
   const tokenPayload = {
     id: user.id,
@@ -84,6 +91,7 @@ export const loginUser = async (payload) => {
     status: 200,
     message: "Login successful",
     user: userWithoutSensitiveData,
+    dokaan: dokaan,
     access_token: `Bearer ${token}`,
   };
 };

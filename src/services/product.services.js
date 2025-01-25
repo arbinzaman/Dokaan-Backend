@@ -15,6 +15,8 @@ export const createProduct = async (data, files) => {
     ownerId,
   } = data;
 
+  console.log("Received shopId:", shopId);  // Log to inspect the value of shopId
+
   let imageUrl = null;
 
   if (files && files.imageUrl) {
@@ -30,6 +32,19 @@ export const createProduct = async (data, files) => {
     imageUrl = uploadResult.secure_url;
   }
 
+  // Check if shopId and ownerId are valid before converting to BigInt
+  if (!shopId || isNaN(shopId)) {
+    console.log("Invalid shopId value:", shopId);  // Log invalid shopId
+    throw new Error("Invalid shopId");
+  }
+  if (!ownerId || isNaN(ownerId)) {
+    throw new Error("Invalid ownerId");
+  }
+
+  // Convert to BigInt only after validation
+  const shopIdBigInt = BigInt(shopId);
+  const ownerIdBigInt = BigInt(ownerId);
+
   return await prisma.product.create({
     data: {
       name,
@@ -39,11 +54,12 @@ export const createProduct = async (data, files) => {
       initialStock: parseInt(initialStock),
       description,
       imageUrl,
-      shopId: BigInt(shopId),
-      ownerId: BigInt(ownerId),
+      shopId: shopIdBigInt,
+      ownerId: ownerIdBigInt,
     },
   });
 };
+
 
 export const updateProduct = async (id, data, files) => {
   let imageUrl = null;
