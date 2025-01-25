@@ -2,6 +2,7 @@ import { Router } from "express";
 import userRoutes from "./userRoutes.js";
 import authRoutes from "./authRoutes.js";
 import profileRoutes from "./profileRoutes.js";
+import productRoutes from "./productRoutes.js";
 // import transporter from "../config/email.config.js";
 import dokaanRoutes from "./dokaanRoutes.js";
 
@@ -11,6 +12,7 @@ router.use("/api/v1/user", userRoutes);
 router.use("/api/v1/auth", authRoutes);
 router.use("/api/v1/profile", profileRoutes);
 router.use("/api/v1/dokaan", dokaanRoutes);
+router.use("/api/v1/products", productRoutes);
 
 // router.post('/send-email', async (req, res) => {
 //     const { to, subject, text, html } = req.body;

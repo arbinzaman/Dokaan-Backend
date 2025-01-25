@@ -57,7 +57,7 @@ export const createDokaanWithNewOwner = async (data) => {
       dokaan_email,
       dokaan_phone,
       dokaan_type,
-      dokaanImageUrl, // Save the Cloudinary URL
+      // dokaanImageUrl, // Save the Cloudinary URL
       ownerId: user.id,
     },
   });
