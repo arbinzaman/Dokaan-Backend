@@ -1,0 +1,19 @@
+// prisma/schema/user.prisma
+model User {
+  id               BigInt   @id @default(autoincrement())
+  email            String   @unique
+  name             String?
+  password         String?
+  role             String?
+  profileImageUrl  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  dokaanOwned      Dokaan[] @relation("DokaanOwnerRelation")
+  dokaanEmployment Dokaan?  @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])
+  productsOwned    Product[]
+  salesMade        Sales[]  @relation("UserSales") // sales made by this user
+
+  dokaanId         BigInt?  
+  shopRole         String?  
+}

@@ -1,0 +1,37 @@
+// prisma/schema/product.prisma
+model Product {
+  id                       BigInt   @id @default(autoincrement())
+  name                     String
+  code                     String   @unique
+  purchasePrice            Float    @default(0.0)
+  salesPrice               Float    @default(0.0)
+  initialStock             Int?     @default(0)
+  imageUrl                 String?
+  discount                 Float?   
+  includeVAT               Boolean? @default(false)
+  stockMaintenanceEnabled  Boolean? @default(false)
+  expiringProductAlert     Boolean? @default(false)
+  maxDaysForExpAlert       Int?     
+  lowStockAlertEnabled     Boolean  @default(false)
+  maxStockForAlert         Int?
+  mfgDate                  DateTime?
+  expDate                  DateTime?
+  batchNo                  String?
+  serialNoOrIMEI           String?
+  description              String?
+  itemUnit                 String?
+  itemCategory             String?
+  size                     String?
+  wholesalePrice           Float?
+  mrp                      Float?  
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  shopId                   BigInt
+  shop                     Dokaan   @relation(fields: [shopId], references: [id])
+
+  ownerId                  BigInt
+  owner                    User     @relation(fields: [ownerId], references: [id])
+
+  sales                    Sales[]  // ✅ Add opposite relation to Sales
+}
