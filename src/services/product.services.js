@@ -1,12 +1,12 @@
 import prisma from "../config/db.config.js";
 import cloudinary from "../config/cloudinary.config.js";
-import { generateFileName, imageValidator } from "../utils/helper.js";
+import { cleanBarcode, generateFileName, imageValidator } from "../utils/helper.js";
 
 export const createProduct = async (data, files) => {
   try {
     const {
       name,
-      code,
+      code, // Full barcode
       purchasePrice,
       salesPrice,
       initialStock,
@@ -58,7 +58,7 @@ export const createProduct = async (data, files) => {
         initialStock: parseInt(initialStock),
         description,
         imageUrl,
-        shopId: Number(shopId), // Convert to Number instead of BigInt
+        shopId: Number(shopId),
         ownerId: Number(ownerId),
       },
     });
@@ -86,7 +86,7 @@ export const updateProduct = async (id, data, files) => {
     }
 
     return await prisma.product.update({
-      where: { id: Number(id) }, // Use Number instead of BigInt
+      where: { id: Number(id) },
       data: {
         ...data,
         imageUrl: imageUrl || undefined,
@@ -101,7 +101,7 @@ export const updateProduct = async (id, data, files) => {
 export const deleteProduct = async (id) => {
   try {
     return await prisma.product.delete({
-      where: { id: Number(id) }, // Convert to Number
+      where: { id: Number(id) },
     });
   } catch (error) {
     console.error("Delete Product Error:", error);
@@ -123,10 +123,32 @@ export const getAllProducts = async () => {
   }
 };
 
+// New function to get products by email
+export const getProductsByEmail = async (email) => {
+  try {
+    // Fetch the user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        productsOwned: true, // Include the user's products
+      },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user.productsOwned; // Return the list of products
+  } catch (error) {
+    console.error("Get Products By Email Error:", error);
+    throw error;
+  }
+};
+
 export const getProductById = async (id) => {
   try {
     return await prisma.product.findUnique({
-      where: { id: Number(id) }, // Convert to Number
+      where: { id: Number(id) },
       include: {
         shop: true,
         owner: true,
@@ -134,6 +156,34 @@ export const getProductById = async (id) => {
     });
   } catch (error) {
     console.error("Get Product By ID Error:", error);
+    throw error;
+  }
+};
+
+export const getProductByBarcode = async (barcode) => {
+  try {
+    // Clean the barcode (remove spaces, dashes, etc.)
+    const cleanedBarcode = cleanBarcode(barcode);
+    console.log("Searching for barcode:", cleanedBarcode);
+
+    // Search for the product by full barcode
+    const product = await prisma.product.findFirst({
+      where: {
+        code: cleanedBarcode,
+      },
+      include: {
+        shop: true,
+        owner: true,
+      },
+    });
+
+    if (!product) {
+      console.log("No product found with barcode:", cleanedBarcode);
+    }
+
+    return product;
+  } catch (error) {
+    console.error("Get Product By Barcode Error:", error);
     throw error;
   }
 };

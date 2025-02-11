@@ -1,15 +1,16 @@
 // prisma/schema/sales.prisma
 model Sales {
-  id          BigInt   @id @default(autoincrement())
-  productId   BigInt
-  sellerId    BigInt
-  shopId      BigInt
-  branch      String?
-  quantity    Int
-  totalPrice  Float
-  soldAt      DateTime @default(now())
+  id         BigInt   @id @default(autoincrement())
+  productId  BigInt
+  code       String   // ✅ Added barcode to track sales
+  sellerId   BigInt
+  shopId     BigInt
+  branch     String?
+  quantity   Int
+  totalPrice Float
+  soldAt     DateTime @default(now())
 
-  product     Product  @relation(fields: [productId], references: [id])
-  seller      User     @relation("UserSales", fields: [sellerId], references: [id])
-  shop        Dokaan   @relation(fields: [shopId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+  seller     User     @relation("UserSales", fields: [sellerId], references: [id])
+  shop       Dokaan   @relation(fields: [shopId], references: [id])
 }
