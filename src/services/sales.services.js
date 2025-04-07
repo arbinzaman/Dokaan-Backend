@@ -2,6 +2,28 @@ import prisma from "../config/db.config.js";
 
 // Create Sale
 export const createSale = async (data) => {
+  const product = await prisma.product.findUnique({
+    where: { id: data.productId },
+  });
+
+  if (!product) {
+    throw new Error("Product not found");
+  }
+
+  // Check stock
+  if ((product.initialStock || 0) < data.quantity) {
+    throw new Error("Not enough stock available");
+  }
+
+  // Deduct stock
+  await prisma.product.update({
+    where: { id: data.productId },
+    data: {
+      initialStock: (product.initialStock || 0) - data.quantity,
+    },
+  });
+
+  // Create sale with product snapshot
   return await prisma.sales.create({
     data: {
       productId: data.productId,
@@ -12,6 +34,19 @@ export const createSale = async (data) => {
       quantity: data.quantity,
       totalPrice: data.totalPrice,
       soldAt: new Date(),
+      name: product.name,
+      purchasePrice: product.purchasePrice,
+      salesPrice: product.salesPrice,
+      discount: product.discount,
+      includeVAT: product.includeVAT,
+      batchNo: product.batchNo,
+      serialNoOrIMEI: product.serialNoOrIMEI,
+      description: product.description,
+      itemUnit: product.itemUnit,
+      itemCategory: product.itemCategory,
+      size: product.size,
+      wholesalePrice: product.wholesalePrice,
+      mrp: product.mrp,
     },
   });
 };
@@ -39,7 +74,7 @@ export const getSaleById = async (id) => {
   });
 };
 
-// Update Sale
+// Update Sale (only non-product fields)
 export const updateSale = async (id, data) => {
   return await prisma.sales.update({
     where: { id: Number(id) },
