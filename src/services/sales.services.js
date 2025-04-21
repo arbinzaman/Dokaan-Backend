@@ -3,7 +3,7 @@ import prisma from "../config/db.config.js";
 // Create Sale
 export const createSale = async (data) => {
   const product = await prisma.product.findUnique({
-    where: { id: data.productId },
+    where: { code: data.productCode },
   });
 
   if (!product) {
@@ -17,16 +17,16 @@ export const createSale = async (data) => {
 
   // Deduct stock
   await prisma.product.update({
-    where: { id: data.productId },
+    where: { id: product.id },
     data: {
       initialStock: (product.initialStock || 0) - data.quantity,
     },
   });
 
-  // Create sale with product snapshot
+  // Create sale with product snapshot and correct relation
   return await prisma.sales.create({
     data: {
-      productId: data.productId,
+      productId: product.id, // ✅ store actual relation ID
       code: data.code,
       sellerId: data.sellerId,
       shopId: data.shopId,
@@ -34,6 +34,8 @@ export const createSale = async (data) => {
       quantity: data.quantity,
       totalPrice: data.totalPrice,
       soldAt: new Date(),
+
+      // Snapshot from product
       name: product.name,
       purchasePrice: product.purchasePrice,
       salesPrice: product.salesPrice,
@@ -50,6 +52,7 @@ export const createSale = async (data) => {
     },
   });
 };
+
 
 // Get All Sales
 export const getAllSales = async () => {
