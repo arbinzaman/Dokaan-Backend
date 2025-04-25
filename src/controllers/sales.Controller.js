@@ -4,6 +4,7 @@ import {
   getSaleById,
   updateSale,
   deleteSale,
+  getSalesStats 
 } from "../services/sales.services.js";
 
 class SalesController {
@@ -56,6 +57,17 @@ class SalesController {
       return res.json({ message: "Sale deleted successfully" });
     } catch (error) {
       console.error("Delete Sale Error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+
+  static async getStats(req, res) {
+    try {
+      const stats = await getSalesStats();
+      return res.json(stats);
+    } catch (error) {
+      console.error("Get Sales Stats Error:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   }

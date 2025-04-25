@@ -6,8 +6,11 @@ const router = Router();
 
 router.post("/", authMiddleware, SalesController.create);
 router.get("/", authMiddleware, SalesController.getAll);
+router.get("/stats", authMiddleware, SalesController.getStats);
 router.get("/:id", authMiddleware, SalesController.getById);
 router.put("/:id", authMiddleware, SalesController.update);
 router.delete("/:id", authMiddleware, SalesController.delete);
+
+
 
 export default router;

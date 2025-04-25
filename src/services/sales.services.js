@@ -91,3 +91,16 @@ export const deleteSale = async (id) => {
     where: { id: Number(id) },
   });
 };
+
+export const getSalesStats = async () => {
+  const sales = await prisma.sales.findMany();
+
+  const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalPrice, 0);
+  const averageOrderValue = totalRevenue / sales.length || 0;
+
+  return {
+    totalRevenue,
+    averageOrderValue,
+  };
+};
+
