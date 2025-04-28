@@ -6,7 +6,7 @@ export const createProduct = async (data, files) => {
   try {
     const {
       name,
-      code, // Full barcode
+      code,
       purchasePrice,
       salesPrice,
       initialStock,
@@ -15,12 +15,10 @@ export const createProduct = async (data, files) => {
       ownerId,
     } = data;
 
-    console.log("Received shopId:", shopId); // Debugging
-
     let imageUrl = null;
 
     if (files?.imageUrl?.length > 0) {
-      const image = files.imageUrl[0]; // Ensure correct file access
+      const image = files.imageUrl[0];
       const validationError = imageValidator(image.size, image.mimetype);
       if (validationError) throw new Error(validationError);
 
@@ -32,16 +30,9 @@ export const createProduct = async (data, files) => {
       imageUrl = uploadResult.secure_url;
     }
 
-    // Validate shopId and ownerId
-    if (!shopId || isNaN(Number(shopId))) {
-      console.log("Invalid shopId value:", shopId);
-      throw new Error("Invalid shopId");
-    }
-    if (!ownerId || isNaN(Number(ownerId))) {
-      throw new Error("Invalid ownerId");
-    }
+    if (!shopId || isNaN(Number(shopId))) throw new Error("Invalid shopId");
+    if (!ownerId || isNaN(Number(ownerId))) throw new Error("Invalid ownerId");
 
-    // Ensure code is unique before inserting
     const existingProduct = await prisma.product.findUnique({
       where: { code },
     });
@@ -111,26 +102,36 @@ export const deleteProduct = async (id) => {
 
 export const getAllProducts = async () => {
   try {
-    return await prisma.product.findMany({
+    const products = await prisma.product.findMany({
       include: {
         shop: true,
         owner: true,
+        sales: true,
       },
     });
+
+    return products.map(product => ({
+      ...product,
+      salesCount: product.sales.length,
+    }));
   } catch (error) {
     console.error("Get All Products Error:", error);
     throw error;
   }
 };
 
-// New function to get products by email
 export const getProductsByEmail = async (email) => {
   try {
-    // Fetch the user by email
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        productsOwned: true, // Include the user's products
+        productsOwned: {
+          include: {
+            shop: true,
+            owner: true,
+            sales: true,
+          },
+        },
       },
     });
 
@@ -138,7 +139,10 @@ export const getProductsByEmail = async (email) => {
       throw new Error("User not found");
     }
 
-    return user.productsOwned; // Return the list of products
+    return user.productsOwned.map(product => ({
+      ...product,
+      salesCount: product.sales.length,
+    }));
   } catch (error) {
     console.error("Get Products By Email Error:", error);
     throw error;
@@ -147,13 +151,21 @@ export const getProductsByEmail = async (email) => {
 
 export const getProductById = async (id) => {
   try {
-    return await prisma.product.findUnique({
+    const product = await prisma.product.findUnique({
       where: { id: Number(id) },
       include: {
         shop: true,
         owner: true,
+        sales: true,
       },
     });
+
+    if (!product) return null;
+
+    return {
+      ...product,
+      salesCount: product.sales.length,
+    };
   } catch (error) {
     console.error("Get Product By ID Error:", error);
     throw error;
@@ -162,11 +174,9 @@ export const getProductById = async (id) => {
 
 export const getProductByBarcode = async (barcode) => {
   try {
-    // Clean the barcode (remove spaces, dashes, etc.)
     const cleanedBarcode = cleanBarcode(barcode);
     console.log("Searching for barcode:", cleanedBarcode);
 
-    // Search for the product by full barcode
     const product = await prisma.product.findFirst({
       where: {
         code: cleanedBarcode,
@@ -174,14 +184,19 @@ export const getProductByBarcode = async (barcode) => {
       include: {
         shop: true,
         owner: true,
+        sales: true,
       },
     });
 
     if (!product) {
       console.log("No product found with barcode:", cleanedBarcode);
+      return null;
     }
 
-    return product;
+    return {
+      ...product,
+      salesCount: product.sales.length,
+    };
   } catch (error) {
     console.error("Get Product By Barcode Error:", error);
     throw error;
