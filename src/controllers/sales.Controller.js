@@ -4,7 +4,8 @@ import {
   getSaleById,
   updateSale,
   deleteSale,
-  getSalesStats 
+  getSalesStats ,
+  getTopSellingProducts
 } from "../services/sales.services.js";
 
 class SalesController {
@@ -71,6 +72,20 @@ class SalesController {
       return res.status(500).json({ message: "Internal server error" });
     }
   }
+
+  static async getTopSelling(req, res) {
+    try {
+      const limit = parseInt(req.query.limit) || 5;
+      const shopId = req.query.shopId; // Optional: allow filter by shop
+      const result = await getTopSellingProducts(limit, shopId);
+      return res.json(result);
+    } catch (error) {
+      console.error("Get Top Selling Products Error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+  
+  
 }
 
 export default SalesController;
