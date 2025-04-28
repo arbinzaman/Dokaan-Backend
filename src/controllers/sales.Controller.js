@@ -4,11 +4,14 @@ import {
   getSaleById,
   updateSale,
   deleteSale,
-  getSalesStats ,
-  getTopSellingProducts
+  getSalesStats,
+  getTopSellingProducts,
+  getLowStockProducts,
+  getSalesDataByMonth,  // Import the new service function
 } from "../services/sales.services.js";
 
 class SalesController {
+  // Create a new sale
   static async create(req, res) {
     try {
       const sale = await createSale(req.body);
@@ -19,6 +22,7 @@ class SalesController {
     }
   }
 
+  // Get all sales
   static async getAll(req, res) {
     try {
       const sales = await getAllSales();
@@ -29,6 +33,7 @@ class SalesController {
     }
   }
 
+  // Get sale by ID
   static async getById(req, res) {
     try {
       const sale = await getSaleById(req.params.id);
@@ -42,9 +47,13 @@ class SalesController {
     }
   }
 
+  // Update sale by ID
   static async update(req, res) {
     try {
       const updatedSale = await updateSale(req.params.id, req.body);
+      if (!updatedSale) {
+        return res.status(404).json({ message: "Sale not found" });
+      }
       return res.json(updatedSale);
     } catch (error) {
       console.error("Update Sale Error:", error);
@@ -52,9 +61,13 @@ class SalesController {
     }
   }
 
+  // Delete sale by ID
   static async delete(req, res) {
     try {
-      await deleteSale(req.params.id);
+      const deletedSale = await deleteSale(req.params.id);
+      if (!deletedSale) {
+        return res.status(404).json({ message: "Sale not found" });
+      }
       return res.json({ message: "Sale deleted successfully" });
     } catch (error) {
       console.error("Delete Sale Error:", error);
@@ -62,7 +75,7 @@ class SalesController {
     }
   }
 
-
+  // Get sales statistics (e.g., total sales, average sales, etc.)
   static async getStats(req, res) {
     try {
       const stats = await getSalesStats();
@@ -73,10 +86,11 @@ class SalesController {
     }
   }
 
+  // Get top-selling products (with optional limit and shopId)
   static async getTopSelling(req, res) {
     try {
       const limit = parseInt(req.query.limit) || 5;
-      const shopId = req.query.shopId; // Optional: allow filter by shop
+      const shopId = req.query.shopId;
       const result = await getTopSellingProducts(limit, shopId);
       return res.json(result);
     } catch (error) {
@@ -84,8 +98,32 @@ class SalesController {
       return res.status(500).json({ message: "Internal server error" });
     }
   }
-  
-  
+
+  // Get low stock products for a specific shop
+  static async getLowStock(req, res) {
+    try {
+      const shopId = req.query.shopId;
+      if (!shopId) {
+        return res.status(400).json({ message: "Shop ID is required" });
+      }
+      const result = await getLowStockProducts(shopId);
+      return res.json(result);
+    } catch (error) {
+      console.error("Get Low Stock Products Error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  // Get sales trend data (e.g., sales over time)
+  static async getSalesTrend(req, res) {
+    try {
+      const salesTrend = await getSalesDataByMonth();
+      return res.json(salesTrend);
+    } catch (error) {
+      console.error("Get Sales Trend Error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
 }
 
 export default SalesController;

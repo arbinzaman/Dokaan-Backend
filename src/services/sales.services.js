@@ -65,17 +65,23 @@ export const getAllSales = async () => {
   });
 };
 
-// Get Sale by ID
 export const getSaleById = async (id) => {
-  return await prisma.sales.findUnique({
-    where: { id: Number(id) },
-    include: {
-      product: true,
-      seller: true,
-      shop: true,
-    },
-  });
+  try {
+    // If your database uses BigInt for 'id', you can cast it
+    return await prisma.sales.findUnique({
+      where: { id: BigInt(id) },  // Ensure id is BigInt if needed
+      include: {
+        product: true,
+        seller: true,
+        shop: true,
+      },
+    });
+  } catch (error) {
+    console.error('Get Sale By ID Error:', error);
+    throw new Error('Invalid ID or incorrect field type');
+  }
 };
+
 
 // Update Sale (only non-product fields)
 export const updateSale = async (id, data) => {
@@ -154,6 +160,66 @@ export const getTopSellingProducts = async (limit = 5, shopId) => {
     products: productsWithSales,
   };
 };
+
+
+export const getLowStockProducts = async (shopId) => {
+  // Find products with initial stock less than or equal to 5 or with null initial stock
+  const lowStockProducts = await prisma.product.findMany({
+    where: {
+      shopId: shopId, // Filter by shopId (dokaan.id)
+      OR: [
+        {
+          initialStock: {
+            lte: 5, // Define threshold for low stock
+          },
+        },
+        {
+          initialStock: null, // Include products with null stock
+        },
+        {
+          initialStock: 0, // Include products with zero stock
+        },
+      ],
+    },
+  });
+
+  const count = lowStockProducts.length;
+
+  return {
+    totalLowStockProducts: count,
+    products: lowStockProducts,
+  };
+};
+
+
+// sales.services.js
+export const getSalesDataByMonth = async () => {
+  try {
+    const salesData = await prisma.sales.groupBy({
+      by: ['month'], // Group by month
+      _sum: {
+        sales: true, // Sum up sales for each month
+      },
+      orderBy: {
+        month: 'asc', // Order by month
+      },
+    });
+
+    // Format the data as needed
+    return salesData.map((data) => ({
+      month: data.month,
+      sales: data._sum.sales,
+    }));
+  } catch (error) {
+    console.error('Error fetching sales data by month:', error);
+    throw new Error('Error fetching sales data');
+  }
+};
+
+
+
+
+
 
 
 
