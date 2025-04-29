@@ -10,4 +10,9 @@ generator client {
 }
 
 
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../output/erd.svg" // Optional: Specify output file (default is erd.svg)
+}
+
 
