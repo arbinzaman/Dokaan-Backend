@@ -1,17 +1,17 @@
-import express from "express";
-import SalesController from "../controllers/sales.controller.js";
+import { Router } from "express";
+import SalesController from "../controllers/sales.Controller.js";
+import authMiddleware from "../middlewares/authMiddleware.js";
 
-const router = express.Router();
+const router = Router();
 
-// Existing routes
-router.post("/create", SalesController.create);
-router.get("/", SalesController.getAll);
-router.get("/:id", SalesController.getById);
-router.put("/:id", SalesController.update);
-router.delete("/:id", SalesController.delete);
-router.get("/stats", SalesController.getStats);
+router.post("/", authMiddleware, SalesController.create);
+router.get("/", authMiddleware, SalesController.getAll);
 router.get("/top-selling", SalesController.getTopSelling);
-router.get("/low-stock", SalesController.getLowStock);
-router.get("/sales-trend", SalesController.getSalesTrend);
+router.get("/stats", authMiddleware, SalesController.getStats);
+router.get("/:id", authMiddleware, SalesController.getById);
+router.put("/:id", authMiddleware, SalesController.update);
+router.delete("/:id", authMiddleware, SalesController.delete);
+
+
 
 export default router;
