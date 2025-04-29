@@ -104,3 +104,53 @@ export const getSalesStats = async () => {
   };
 };
 
+
+// Get Top Selling Products by Product Code
+export const getTopSellingProducts = async (limit = 5, shopId) => {
+  const whereCondition = shopId ? { shopId: Number(shopId) } : {};
+
+  // Step 1: Group sales by product code
+  const groupedSales = await prisma.sales.groupBy({
+    by: ["code"],
+    where: whereCondition,
+    _sum: {
+      quantity: true,
+    },
+    orderBy: {
+      _sum: {
+        quantity: "desc",
+      },
+    },
+  });
+
+  // Step 2: Total top-selling products (before applying limit)
+  const totalTopSellingProducts = groupedSales.length;
+
+  // Step 3: Apply limit
+  const limitedSales = groupedSales.slice(0, limit);
+
+  // Step 4: Fetch related product details
+  const productCodes = limitedSales.map((item) => item.code);
+
+  const products = await prisma.product.findMany({
+    where: {
+      code: {
+        in: productCodes,
+      },
+    },
+  });
+
+  // Step 5: Merge products with their sales quantity
+  const productsWithSales = products.map((product) => {
+    const sale = limitedSales.find((item) => item.code === product.code);
+    return {
+      ...product,
+      totalSold: sale?._sum.quantity || 0,
+    };
+  });
+
+  return {
+    totalTopSellingProducts,
+    products: productsWithSales,
+  };
+};
