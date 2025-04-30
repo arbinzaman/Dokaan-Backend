@@ -9,7 +9,8 @@ import {
   getTopSellingProductsBySeller,
   getMonthlySalesStats,
   getTotalSales,
-  getCategoryWiseSales
+  getCategoryWiseSales,
+  getTotalRevenue,
 } from "../services/sales.services.js";
 
 class SalesController {
@@ -90,13 +91,14 @@ class SalesController {
 
   static async getTotalRevenue(req, res) {
     try {
-      const { totalRevenue } = await getSalesStats();
+      const { totalRevenue } = await getTotalRevenue();
       return res.json({ totalRevenue });
     } catch (error) {
       console.error("Get Total Revenue Error:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   }
+  
 
   static async getSalesStats(req, res) {
     try {

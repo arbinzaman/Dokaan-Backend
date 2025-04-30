@@ -237,7 +237,7 @@ export const getTotalSales = async () => {
   });
 
   return {
-    totalSales: result._sum.totalAmount || 0,
+    totalSales: result._sum.totalPrice || 0, // ✅ correct field
   };
 };
 
@@ -255,6 +255,27 @@ export const getCategoryWiseSales = async () => {
     totalSalesAmount: item._sum.totalPrice || 0,
   }));
 };
+
+export const getTotalRevenue = async () => {
+  const sales = await prisma.sales.findMany({
+    select: {
+      salesPrice: true,       // selling price
+      purchasePrice: true,    // buying price
+    },
+  });
+
+  let totalRevenue = 0;
+
+  for (const sale of sales) {
+    const revenue = sale.salesPrice - sale.purchasePrice;
+    totalRevenue += revenue;
+  }
+
+  return { totalRevenue };
+};
+
+
+
 
 // // Get Top Selling Products by Product Code
 // export const getTopSellingProducts = async (limit = 5, shopId) => {
