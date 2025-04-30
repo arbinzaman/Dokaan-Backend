@@ -19,3 +19,20 @@ export const byteToMB = (bytes) =>{
 export const generateFileName = () =>{
 return uuidv4();
 }
+
+
+
+// utils/barcodeHelper.js
+export const cleanBarcode = (barcode) => {
+  // Clean up barcode (e.g., remove spaces, hyphens, etc.)
+  return barcode.replace(/[\s-]/g, '');
+};
+
+// Function to extract brand and product code
+export const splitBarcode = (barcode) => {
+  // Assuming first 5 digits represent the brand code
+  const brandCode = barcode.slice(0, 4);
+  const productCode = barcode.slice(4);  // Remaining part is the product code
+  return { brandCode, productCode };
+};
+

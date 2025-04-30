@@ -1,0 +1,33 @@
+model Sales {
+  id         BigInt   @id @default(autoincrement())
+  productId  BigInt   @map("product_id")
+  code       String
+  sellerId   BigInt   @map("seller_id")
+  shopId     BigInt   @map("shop_id")
+  branch     String?
+  quantity   Int
+  totalPrice Float
+  soldAt     DateTime @default(now()) @map("sold_at")
+
+  // Full product snapshot at sale time 👇
+  name           String
+  purchasePrice  Float
+  salesPrice     Float
+  discount       Float?
+  includeVAT     Boolean?
+  batchNo        String?
+  serialNoOrIMEI String?
+  description    String?
+  itemUnit       String?
+  itemCategory   String?
+  size           String?
+  wholesalePrice Float?
+  mrp            Float?
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  seller  User    @relation("UserSales", fields: [sellerId], references: [id], onDelete: Restrict)
+  shop    Dokaan  @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("Sales")
+}

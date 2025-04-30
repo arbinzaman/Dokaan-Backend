@@ -5,6 +5,7 @@ import profileRoutes from "./profileRoutes.js";
 import productRoutes from "./productRoutes.js";
 // import transporter from "../config/email.config.js";
 import dokaanRoutes from "./dokaanRoutes.js";
+import salesRoutes from "./sales.routes.js";
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.use("/api/v1/auth", authRoutes);
 router.use("/api/v1/profile", profileRoutes);
 router.use("/api/v1/dokaan", dokaanRoutes);
 router.use("/api/v1/products", productRoutes);
+router.use("/api/v1/sales", salesRoutes);
 
 // router.post('/send-email', async (req, res) => {
 //     const { to, subject, text, html } = req.body;

@@ -1,0 +1,18 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../output/erd.svg" // Optional: Specify output file (default is erd.svg)
+}
+
+
