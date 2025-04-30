@@ -4,10 +4,12 @@ import {
   getSaleById,
   updateSale,
   deleteSale,
-  getSalesStats ,
+  getSalesStats,
   // getTopSellingProducts,
   getTopSellingProductsBySeller,
-  getMonthlySalesStats
+  getMonthlySalesStats,
+  getTotalSales,
+  getCategoryWiseSales
 } from "../services/sales.services.js";
 
 class SalesController {
@@ -64,7 +66,6 @@ class SalesController {
     }
   }
 
-
   static async getStats(req, res) {
     try {
       const stats = await getSalesStats();
@@ -86,7 +87,7 @@ class SalesController {
       return res.status(500).json({ message: "Internal server error" });
     }
   }
-  
+
   static async getTotalRevenue(req, res) {
     try {
       const { totalRevenue } = await getSalesStats();
@@ -96,7 +97,7 @@ class SalesController {
       return res.status(500).json({ message: "Internal server error" });
     }
   }
-  
+
   static async getSalesStats(req, res) {
     try {
       const data = await getMonthlySalesStats();
@@ -106,7 +107,26 @@ class SalesController {
       res.status(500).json({ message: "Failed to fetch sales statistics" });
     }
   }
-  
+
+  static async getTotalSalesAmount(req, res) {
+    try {
+      const data = await getTotalSales();
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Total sales fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch total sales" });
+    }
+  }
+
+ static async getSalesByCategory (req, res){
+    try {
+      const data = await getCategoryWiseSales();
+      res.status(200).json(data);
+    } catch (error) {
+      console.error('Error fetching category-wise sales:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
 }
 
 export default SalesController;

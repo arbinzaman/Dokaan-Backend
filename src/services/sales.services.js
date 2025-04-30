@@ -210,11 +210,11 @@ export const getMonthlySalesStats = async () => {
   const salesByMonth = {};
 
   sales.forEach((sale) => {
-    const month = monthMap[new Date(sale.createdAt).getMonth()];
+    const month = monthMap[new Date(sale.soldAt).getMonth()];
     if (!salesByMonth[month]) {
       salesByMonth[month] = 0;
     }
-    salesByMonth[month] += sale.totalAmount;
+    salesByMonth[month] += sale.totalPrice;
   });
 
   const result = Object.keys(monthMap).map((num) => {
@@ -226,6 +226,34 @@ export const getMonthlySalesStats = async () => {
   });
 
   return result;
+};
+
+// Get total sales (sum of all sales)
+export const getTotalSales = async () => {
+  const result = await prisma.sales.aggregate({
+    _sum: {
+      totalPrice: true,
+    },
+  });
+
+  return {
+    totalSales: result._sum.totalAmount || 0,
+  };
+};
+
+
+export const getCategoryWiseSales = async () => {
+  const result = await prisma.sales.groupBy({
+    by: ['itemCategory'],
+    _sum: {
+      totalPrice: true,
+    },
+  });
+
+  return result.map((item) => ({
+    category: item.itemCategory || 'Uncategorized',
+    totalSalesAmount: item._sum.totalPrice || 0,
+  }));
 };
 
 // // Get Top Selling Products by Product Code
