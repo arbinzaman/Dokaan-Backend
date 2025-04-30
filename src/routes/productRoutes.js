@@ -6,10 +6,11 @@ const router = Router();
 
 // Routes for Product CRUD operations
 router.post("/", authMiddleware, ProductController.create); // Create a product
-router.post("/scan", ProductController.scan);
 router.get("/", authMiddleware, ProductController.getAll); // Get all products
+router.post("/scan", ProductController.scan);
+router.get('/total-products', ProductController.getTotalProductCount);
 router.get("/:email", authMiddleware, ProductController.getProductsByEmail); // Get all products by email
-router.get("/:id", authMiddleware, ProductController.getById); // Get a single product by ID
+router.get("/id/:id", authMiddleware, ProductController.getById); // Get a single product by ID
 router.put("/:id", authMiddleware, ProductController.update); // Update a product by ID
 router.delete("/:id", authMiddleware, ProductController.delete); // Delete a product by ID
 

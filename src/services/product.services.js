@@ -202,3 +202,8 @@ export const getProductByBarcode = async (barcode) => {
     throw error;
   }
 };
+
+export const getTotalProductCount = async () => {
+  const count = await prisma.product.count();
+  return count;
+};
