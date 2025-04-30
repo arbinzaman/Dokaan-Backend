@@ -5,7 +5,9 @@ import {
   updateSale,
   deleteSale,
   getSalesStats ,
-  getTopSellingProducts
+  // getTopSellingProducts,
+  getTopSellingProductsBySeller,
+  getMonthlySalesStats
 } from "../services/sales.services.js";
 
 class SalesController {
@@ -77,7 +79,7 @@ class SalesController {
     try {
       const limit = parseInt(req.query.limit) || 5;
       const shopId = req.query.shopId; // Optional: allow filter by shop
-      const result = await getTopSellingProducts(limit, shopId);
+      const result = await getTopSellingProductsBySeller(limit, shopId);
       return res.json(result);
     } catch (error) {
       console.error("Get Top Selling Products Error:", error);
@@ -85,6 +87,25 @@ class SalesController {
     }
   }
   
+  static async getTotalRevenue(req, res) {
+    try {
+      const { totalRevenue } = await getSalesStats();
+      return res.json({ totalRevenue });
+    } catch (error) {
+      console.error("Get Total Revenue Error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+  
+  static async getSalesStats(req, res) {
+    try {
+      const data = await getMonthlySalesStats();
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Sales stats error:", error);
+      res.status(500).json({ message: "Failed to fetch sales statistics" });
+    }
+  }
   
 }
 
