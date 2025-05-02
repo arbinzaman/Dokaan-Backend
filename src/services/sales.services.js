@@ -2,8 +2,9 @@ import prisma from "../config/db.config.js";
 
 // Create Sale
 export const createSale = async (data) => {
+  console.log(data);
   const product = await prisma.product.findUnique({
-    where: { code: data.productCode },
+    where: { code: data.code },
   });
 
   if (!product) {
@@ -17,7 +18,7 @@ export const createSale = async (data) => {
 
   // Deduct stock
   await prisma.product.update({
-    where: { id: product.id },
+    where: { code: product.code },
     data: {
       initialStock: (product.initialStock || 0) - data.quantity,
     },
@@ -26,15 +27,32 @@ export const createSale = async (data) => {
   // Create sale with product snapshot and correct relation
   return await prisma.sales.create({
     data: {
-      productId: product.id, // ✅ store actual relation ID
+      // productId: product.id, // Store the actual relation ID
       code: data.code,
-      sellerId: data.sellerId,
-      shopId: data.shopId,
+      // sellerId: data.sellerId,
+      // shopId: data.shopId,
       branch: data.branch,
       quantity: data.quantity,
       totalPrice: data.totalPrice,
       soldAt: new Date(),
 
+        // Connect to the existing product
+        product: {
+          connect: { id: product.id }, // This ensures you're linking to the existing product
+        },
+        seller: {
+          connect: {
+            id: data.sellerId, // connect the seller by their unique ID
+          },
+        },
+          // Shop relation
+          shop: {
+            connect: {
+              id: data.shopId,
+            },
+          },
+    
+      
       // Snapshot from product
       name: product.name,
       purchasePrice: product.purchasePrice,
@@ -50,9 +68,9 @@ export const createSale = async (data) => {
       wholesalePrice: product.wholesalePrice,
       mrp: product.mrp,
     },
+    
   });
 };
-
 
 // Get All Sales
 export const getAllSales = async () => {
@@ -129,7 +147,6 @@ export const getSalesStats = async () => {
   return sellerStats;
 };
 
-
 // Get Top Selling Products by Seller
 export const getTopSellingProductsBySeller = async (limit = 5, shopId) => {
   const whereCondition = shopId ? { shopId: Number(shopId) } : {};
@@ -193,7 +210,6 @@ export const getTopSellingProductsBySeller = async (limit = 5, shopId) => {
   return sellerTopSellingProducts;
 };
 
-
 export const getMonthlySalesStats = async () => {
   const sales = await prisma.sales.findMany({
     select: {
@@ -203,8 +219,18 @@ export const getMonthlySalesStats = async () => {
   });
 
   const monthMap = {
-    0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr", 4: "May", 5: "Jun",
-    6: "Jul", 7: "Aug", 8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec",
+    0: "Jan",
+    1: "Feb",
+    2: "Mar",
+    3: "Apr",
+    4: "May",
+    5: "Jun",
+    6: "Jul",
+    7: "Aug",
+    8: "Sep",
+    9: "Oct",
+    10: "Nov",
+    11: "Dec",
   };
 
   const salesByMonth = {};
@@ -241,17 +267,16 @@ export const getTotalSales = async () => {
   };
 };
 
-
 export const getCategoryWiseSales = async () => {
   const result = await prisma.sales.groupBy({
-    by: ['itemCategory'],
+    by: ["itemCategory"],
     _sum: {
       totalPrice: true,
     },
   });
 
   return result.map((item) => ({
-    category: item.itemCategory || 'Uncategorized',
+    category: item.itemCategory || "Uncategorized",
     totalSalesAmount: item._sum.totalPrice || 0,
   }));
 };
@@ -259,8 +284,8 @@ export const getCategoryWiseSales = async () => {
 export const getTotalRevenue = async () => {
   const sales = await prisma.sales.findMany({
     select: {
-      salesPrice: true,       // selling price
-      purchasePrice: true,    // buying price
+      salesPrice: true, // selling price
+      purchasePrice: true, // buying price
     },
   });
 
@@ -273,9 +298,6 @@ export const getTotalRevenue = async () => {
 
   return { totalRevenue };
 };
-
-
-
 
 // // Get Top Selling Products by Product Code
 // export const getTopSellingProducts = async (limit = 5, shopId) => {
