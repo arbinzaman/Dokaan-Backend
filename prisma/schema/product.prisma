@@ -1,17 +1,17 @@
 model Product {
-  id                      BigInt   @id @default(autoincrement())
+  id                      BigInt    @id @default(autoincrement())
   name                    String
-  code                    String   @unique   // ✅ Barcode remains here
-  purchasePrice           Float    @default(0.0)
-  salesPrice              Float    @default(0.0)
-  initialStock            Int?     @default(0)
+  code                    String    @unique
+  purchasePrice           Float     @default(0.0)
+  salesPrice              Float     @default(0.0)
+  initialStock            Int?      @default(0)
   imageUrl                String?
-  discount                Float?   
-  includeVAT              Boolean? @default(false)
-  stockMaintenanceEnabled Boolean? @default(false)
-  expiringProductAlert    Boolean? @default(false)
-  maxDaysForExpAlert      Int?     
-  lowStockAlertEnabled    Boolean  @default(false)
+  discount                Float?
+  includeVAT              Boolean?  @default(false)
+  stockMaintenanceEnabled Boolean?  @default(false)
+  expiringProductAlert    Boolean?  @default(false)
+  maxDaysForExpAlert      Int?
+  lowStockAlertEnabled    Boolean   @default(false)
   maxStockForAlert        Int?
   mfgDate                 DateTime?
   expDate                 DateTime?
@@ -22,15 +22,12 @@ model Product {
   itemCategory            String?
   size                    String?
   wholesalePrice          Float?
-  mrp                     Float?  
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-
+  mrp                     Float?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
   shopId                  BigInt
-  shop                    Dokaan   @relation(fields: [shopId], references: [id])
-
   ownerId                 BigInt
-  owner                   User     @relation(fields: [ownerId], references: [id])
-
-  sales                   Sales[]  // ✅ Relation remains
+  owner                   User      @relation(fields: [ownerId], references: [id])
+  shop                    Dokaan    @relation(fields: [shopId], references: [id])
+  sales                   Sales[]
 }

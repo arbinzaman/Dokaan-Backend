@@ -1,22 +1,20 @@
 model User {
-  id               BigInt   @id @default(autoincrement())
-  email            String   @unique
+  id               BigInt    @id @default(autoincrement())
+  email            String    @unique
   name             String?
   password         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   role             String?
   profileImageUrl  String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Two-Factor Authentication Fields
-  twoFactorEnabled Boolean  @default(false)  // Ensure this is added
-  twoFactorSecret  String?   // Optional, used for 2FA
-
-  dokaanOwned      Dokaan[] @relation("DokaanOwnerRelation")
-  dokaanEmployment Dokaan?  @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])
+  dokaanId         BigInt?
+  shopRole         String?
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  subscription        Boolean  @default(false)
+  subscriptionStatus  String?  // e.g., "active", "inactive", etc.
+  dokaanOwned      Dokaan[]  @relation("DokaanOwnerRelation")
   productsOwned    Product[]
-  salesMade        Sales[]  @relation("UserSales") // sales made by this user
-
-  dokaanId         BigInt?  
-  shopRole         String?  
+  salesMade        Sales[]   @relation("UserSales")
+  dokaanEmployment Dokaan?   @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])
 }

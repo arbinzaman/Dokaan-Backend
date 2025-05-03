@@ -4,7 +4,7 @@ import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
-router.post("/", authMiddleware, SalesController.create);
+router.post("/",  SalesController.create);
 router.get("/", authMiddleware, SalesController.getAll);
 router.get("/top-selling", SalesController.getTopSelling);
 router.get("/stats",  SalesController.getStats);
