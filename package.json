@@ -7,7 +7,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "prisma generate"
+    "build": "prisma generate",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -35,9 +36,9 @@
     "schema": "./prisma/schema"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.4.2",
+
     "nodemon": "^3.1.7",
-    "prisma": "^6.7.0",
-    "prisma-erd-generator": "^2.0.4"
+    "prisma": "^6.7.0"
+
   }
 }
