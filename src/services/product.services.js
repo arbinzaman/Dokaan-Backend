@@ -203,7 +203,19 @@ export const getProductByBarcode = async (barcode) => {
   }
 };
 
+// services/product.services.js
 export const getTotalProductCount = async () => {
-  const count = await prisma.product.count();
-  return count;
+  const result = await prisma.product.groupBy({
+    by: ['shopId'],
+    _count: {
+      id: true,
+    },
+  });
+
+  // Result: [{ shopId: 1, _count: { id: 12 } }, ...]
+  return result.map((entry) => ({
+    shopId: entry.shopId,
+    totalProducts: entry._count.id,
+  }));
 };
+

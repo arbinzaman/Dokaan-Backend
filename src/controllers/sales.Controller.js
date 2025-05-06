@@ -90,8 +90,9 @@ class SalesController {
   }
 
   static async getTotalRevenue(req, res) {
+    const { shopId } = req.body;
     try {
-      const { totalRevenue } = await getTotalRevenue();
+      const { totalRevenue } = await getTotalRevenue(shopId);
       return res.json({ totalRevenue });
     } catch (error) {
       console.error("Get Total Revenue Error:", error);
@@ -111,8 +112,9 @@ class SalesController {
   }
 
   static async getTotalSalesAmount(req, res) {
+    const { shopId } = req.body;
     try {
-      const data = await getTotalSales();
+      const data = await getTotalSales(shopId);
       res.status(200).json(data);
     } catch (error) {
       console.error("Total sales fetch error:", error);

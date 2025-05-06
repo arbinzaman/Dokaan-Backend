@@ -194,22 +194,24 @@ class ProductController {
       });
     }
   }
-  static async getTotalProductCount(req, res) {
-    try {
-      const count = await getTotalProductCount();
+// controllers/product.controller.js
+static async getTotalProductCount(req, res) {
+  try {
+    const count = await getTotalProductCount();
 
-      return res.status(200).json({
-        status: 200,
-        data: count,
-      });
-    } catch (error) {
-      console.error("Get Total Product Count Error:", error);
-      return res.status(500).json({
-        status: 500,
-        message: 'Failed to fetch total product count',
-      });
-    }
+    return res.status(200).json({
+      status: 200,
+      data: count,
+    });
+  } catch (error) {
+    console.error("Get Total Product Count Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: 'Failed to fetch total product count',
+    });
   }
+}
+
 }
 
 export default ProductController;

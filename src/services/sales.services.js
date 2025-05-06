@@ -254,18 +254,22 @@ export const getMonthlySalesStats = async () => {
   return result;
 };
 
-// Get total sales (sum of all sales)
-export const getTotalSales = async () => {
-  const result = await prisma.sales.aggregate({
+// Get total sales for a specific shop (sum of all sales)
+export const getTotalSales = async (shopId) => {
+  const result = await prisma.sales.groupBy({
+    by: ['shopId'],
     _sum: {
       totalPrice: true,
     },
   });
 
-  return {
-    totalSales: result._sum.totalPrice || 0, // ✅ correct field
-  };
+  // Result will look like: [{ shopId: 1, _sum: { totalPrice: 1000n } }, ...]
+  return result.map((entry) => ({
+    shopId: entry.shopId,
+    totalSales: entry._sum.totalPrice ?? 0n,
+  }));
 };
+
 
 export const getCategoryWiseSales = async () => {
   const result = await prisma.sales.groupBy({
@@ -281,11 +285,14 @@ export const getCategoryWiseSales = async () => {
   }));
 };
 
-export const getTotalRevenue = async () => {
+export const getTotalRevenue = async (shopId) => {
   const sales = await prisma.sales.findMany({
+    where: {
+      shopId: shopId,
+    },
     select: {
-      salesPrice: true, // selling price
-      purchasePrice: true, // buying price
+      salesPrice: true,
+      purchasePrice: true,
     },
   });
 
@@ -298,6 +305,7 @@ export const getTotalRevenue = async () => {
 
   return { totalRevenue };
 };
+
 
 // // Get Top Selling Products by Product Code
 // export const getTopSellingProducts = async (limit = 5, shopId) => {
