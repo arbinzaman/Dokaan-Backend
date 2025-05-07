@@ -210,8 +210,11 @@ export const getTopSellingProductsBySeller = async (limit = 5, shopId) => {
   return sellerTopSellingProducts;
 };
 
-export const getMonthlySalesStats = async () => {
+export const getMonthlySalesStats = async (shopId) => {
   const sales = await prisma.sales.findMany({
+    where: {
+      shopId: shopId,
+    },
     select: {
       soldAt: true,
       totalPrice: true,
@@ -219,28 +222,16 @@ export const getMonthlySalesStats = async () => {
   });
 
   const monthMap = {
-    0: "Jan",
-    1: "Feb",
-    2: "Mar",
-    3: "Apr",
-    4: "May",
-    5: "Jun",
-    6: "Jul",
-    7: "Aug",
-    8: "Sep",
-    9: "Oct",
-    10: "Nov",
-    11: "Dec",
+    0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr",
+    4: "May", 5: "Jun", 6: "Jul", 7: "Aug",
+    8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec",
   };
 
   const salesByMonth = {};
 
   sales.forEach((sale) => {
     const month = monthMap[new Date(sale.soldAt).getMonth()];
-    if (!salesByMonth[month]) {
-      salesByMonth[month] = 0;
-    }
-    salesByMonth[month] += sale.totalPrice;
+    salesByMonth[month] = (salesByMonth[month] || 0) + Number(sale.totalPrice);
   });
 
   const result = Object.keys(monthMap).map((num) => {
@@ -254,28 +245,38 @@ export const getMonthlySalesStats = async () => {
   return result;
 };
 
+
 // Get total sales for a specific shop (sum of all sales)
 export const getTotalSales = async (shopId) => {
-  const result = await prisma.sales.groupBy({
-    by: ['shopId'],
+  if (!shopId) {
+    throw new Error("shopId is required");
+  }
+
+  const result = await prisma.sales.aggregate({
+    where: {
+      shopId: Number(shopId),
+    },
     _sum: {
       totalPrice: true,
     },
   });
 
-  // Result will look like: [{ shopId: 1, _sum: { totalPrice: 1000n } }, ...]
-  return result.map((entry) => ({
-    shopId: entry.shopId,
-    totalSales: entry._sum.totalPrice ?? 0n,
-  }));
+  return {
+    shopId: Number(shopId),
+    totalSales: result._sum.totalPrice ?? 0,
+  };
 };
 
 
-export const getCategoryWiseSales = async () => {
+
+export const getCategoryWiseSales = async (shopId) => {
   const result = await prisma.sales.groupBy({
     by: ["itemCategory"],
     _sum: {
       totalPrice: true,
+    },
+    where: {
+      shopId: shopId, // Add filter by shopId
     },
   });
 
@@ -285,10 +286,11 @@ export const getCategoryWiseSales = async () => {
   }));
 };
 
-export const getTotalRevenue = async (shopId) => {
+
+export const getTotalRevenue = async (parsedShopId) => {
   const sales = await prisma.sales.findMany({
     where: {
-      shopId: shopId,
+      shopId: parsedShopId,
     },
     select: {
       salesPrice: true,
