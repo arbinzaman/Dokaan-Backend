@@ -26,13 +26,16 @@ class SalesController {
 
   static async getAll(req, res) {
     try {
-      const sales = await getAllSales();
+      const shopId = req.query.shopId;
+      console.log(shopId);
+      const sales = await getAllSales(shopId);
       return res.json(sales);
     } catch (error) {
       console.error("Get Sales Error:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   }
+  
 
   static async getById(req, res) {
     try {

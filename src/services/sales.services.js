@@ -72,9 +72,9 @@ export const createSale = async (data) => {
   });
 };
 
-// Get All Sales
-export const getAllSales = async () => {
+export const getAllSales = async (shopId) => {
   return await prisma.sales.findMany({
+    where: shopId ? { shopId: Number(shopId) } : undefined,
     include: {
       product: true,
       seller: true,
@@ -82,6 +82,7 @@ export const getAllSales = async () => {
     },
   });
 };
+
 
 // Get Sale by ID
 export const getSaleById = async (id) => {
