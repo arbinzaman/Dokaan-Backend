@@ -26,9 +26,12 @@ class SalesController {
 
   static async getAll(req, res) {
     try {
-      const shopId = req.query.shopId;
-      console.log(shopId);
-      const sales = await getAllSales(shopId);
+      const { shopId, year, month, date } = req.query;
+      if (!shopId) {
+        return res.status(400).json({ message: "shopId is required" });
+      }
+
+      const sales = await getAllSales(shopId, year, month, date);
       return res.json(sales);
     } catch (error) {
       console.error("Get Sales Error:", error);

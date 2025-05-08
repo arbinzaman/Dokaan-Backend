@@ -72,17 +72,103 @@ export const createSale = async (data) => {
   });
 };
 
-export const getAllSales = async (shopId) => {
-  return await prisma.sales.findMany({
-    where: shopId ? { shopId: Number(shopId) } : undefined,
+
+// Get All Sales
+// Filter by year, month, date
+const monthMap = {
+  jan: 0, feb: 1, march: 2, april: 3, may: 4, june: 5,
+  july: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+// Get all sales for a specific shop, with optional filters for year, month, and date
+// Returns an object with filters, filtered sales, and grouped sales
+export const getAllSales = async (shopId, year, month, date,day) => {
+  const sales = await prisma.sales.findMany({
+    where: { shopId: Number(shopId) },
     include: {
       product: true,
       seller: true,
       shop: true,
     },
+    orderBy: { soldAt: "desc" },
   });
-};
 
+  const filtered = sales.filter((sale) => {
+    const soldAt = new Date(sale.soldAt);
+    const saleDay = soldAt.getDate(); // 1 to 31
+    const saleMonth = soldAt.getMonth(); // 0-11
+    const saleYear = soldAt.getFullYear();
+  
+    // Match exact date (YYYY-MM-DD)
+    if (date) {
+      const targetDate = new Date(date);
+      return soldAt.toDateString() === targetDate.toDateString();
+    }
+  
+    // Match specific day of month (e.g., all sales on 7th day)
+    if (day) {
+      return saleDay === Number(day);
+    }
+  
+    if (month && !year) {
+      return saleMonth === monthMap[month.toLowerCase()];
+    }
+  
+    if (year && month) {
+      return (
+        saleYear === Number(year) &&
+        saleMonth === monthMap[month.toLowerCase()]
+      );
+    }
+  
+    if (year) {
+      return saleYear === Number(year);
+    }
+  
+    return true;
+  });
+  
+  
+  
+  
+
+  const grouped = {
+    dayWise: {},
+    monthWise: {},
+    yearWise: {},
+  };
+
+  for (const sale of filtered) {
+    const soldAt = new Date(sale.soldAt);
+    const dayKey = soldAt.toISOString().split("T")[0];
+    const monthKey = `${soldAt.getFullYear()}-${String(soldAt.getMonth() + 1).padStart(2, "0")}`;
+    const yearKey = `${soldAt.getFullYear()}`;
+
+    const groupSale = (group, key) => {
+      if (!group[key]) {
+        group[key] = {
+          totalSales: 0,
+          totalQuantity: 0,
+          totalRevenue: 0,
+          sales: [],
+        };
+      }
+      group[key].totalSales += 1;
+      group[key].totalQuantity += sale.quantity;
+      group[key].totalRevenue += sale.totalPrice;
+      group[key].sales.push(sale);
+    };
+
+    groupSale(grouped.dayWise, dayKey);
+    groupSale(grouped.monthWise, monthKey);
+    groupSale(grouped.yearWise, yearKey);
+  }
+
+  return {
+    filters: { shopId, year, month, date },
+    filteredSales: filtered,
+    groupedSales: grouped,
+  };
+};
 
 // Get Sale by ID
 export const getSaleById = async (id) => {
