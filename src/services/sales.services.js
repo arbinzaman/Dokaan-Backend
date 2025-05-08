@@ -81,7 +81,7 @@ const monthMap = {
 };
 // Get all sales for a specific shop, with optional filters for year, month, and date
 // Returns an object with filters, filtered sales, and grouped sales
-export const getAllSales = async (shopId, year, month, date,day) => {
+export const getAllSales = async (shopId, year, month, date, day) => {
   const sales = await prisma.sales.findMany({
     where: { shopId: Number(shopId) },
     include: {
@@ -94,38 +94,52 @@ export const getAllSales = async (shopId, year, month, date,day) => {
 
   const filtered = sales.filter((sale) => {
     const soldAt = new Date(sale.soldAt);
-    const saleDay = soldAt.getDate(); // 1 to 31
+    const saleDay = soldAt.getDate(); // 1-31
     const saleMonth = soldAt.getMonth(); // 0-11
     const saleYear = soldAt.getFullYear();
   
-    // Match exact date (YYYY-MM-DD)
+    // Match full exact date
     if (date) {
-      const targetDate = new Date(date);
-      return soldAt.toDateString() === targetDate.toDateString();
+      const filterDate = new Date(date);
+      return soldAt.toDateString() === filterDate.toDateString();
     }
   
-    // Match specific day of month (e.g., all sales on 7th day)
-    if (day) {
-      return saleDay === Number(day);
-    }
-  
-    if (month && !year) {
-      return saleMonth === monthMap[month.toLowerCase()];
-    }
-  
-    if (year && month) {
+    // ✅ Match by day + month
+    if (day && month && !year) {
       return (
-        saleYear === Number(year) &&
+        saleDay === Number(day) &&
         saleMonth === monthMap[month.toLowerCase()]
       );
     }
   
+    // ✅ Match by day only (across all months/years)
+    if (day && !month && !year) {
+      return saleDay === Number(day);
+    }
+  
+    // Match by month only
+    if (month && !year) {
+      return saleMonth === monthMap[month.toLowerCase()];
+    }
+  
+    // Match month + year
+    if (month && year) {
+      return (
+        saleMonth === monthMap[month.toLowerCase()] &&
+        saleYear === Number(year)
+      );
+    }
+  
+    // Match year only
     if (year) {
       return saleYear === Number(year);
     }
   
-    return true;
+    return true; // fallback: return all if no filters
   });
+  
+  
+  
   
   
   
