@@ -7,6 +7,7 @@ const router = Router();
 // Routes for Product CRUD operations
 router.post("/", authMiddleware, ProductController.create); // Create a product
 router.get("/", authMiddleware, ProductController.getAll); // Get all products
+router.get("/category", authMiddleware, ProductController.getFiltered); // Get all products
 router.post("/scan", ProductController.scan);
 router.get('/total-products', ProductController.getTotalProductCount);
 router.get("/:email", authMiddleware, ProductController.getProductsByEmail); // Get all products by email
