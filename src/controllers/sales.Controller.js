@@ -15,6 +15,7 @@ import {
 
 class SalesController {
   static async create(req, res) {
+    // console.log(req.body);
     try {
       const sale = await createSale(req.body);
       return res.status(201).json(sale);

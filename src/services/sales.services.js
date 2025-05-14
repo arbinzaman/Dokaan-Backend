@@ -1,76 +1,90 @@
 import prisma from "../config/db.config.js";
 
-// Create Sale
+// Create Sale (for each product in array)
 export const createSale = async (data) => {
   console.log(data);
-  const product = await prisma.product.findUnique({
-    where: { code: data.code },
-  });
 
-  if (!product) {
-    throw new Error("Product not found");
+  const { products, customer, ...saleMeta } = data;
+
+  // --- Handle customer logic ---
+  let customerRecord = null;
+  if (customer?.phone || customer?.email) {
+    customerRecord = await prisma.customer.findFirst({
+      where: {
+        OR: [
+          { phone: customer.phone ?? undefined },
+          { email: customer.email ?? undefined },
+        ],
+      },
+    });
+
+    if (!customerRecord) {
+      customerRecord = await prisma.customer.create({
+        data: {
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email,
+          address: customer.address,
+        },
+      });
+    }
   }
 
-  // Check stock
-  if ((product.initialStock || 0) < data.quantity) {
-    throw new Error("Not enough stock available");
+  const createdSales = [];
+
+  for (const item of products) {
+    const product = await prisma.product.findUnique({
+      where: { code: item.code },
+    });
+
+    if (!product) throw new Error(`Product not found: ${item.code}`);
+    if ((product.initialStock || 0) < item.quantity) {
+      throw new Error(`Not enough stock for product: ${item.productName}`);
+    }
+
+    await prisma.product.update({
+      where: { code: product.code },
+      data: {
+        initialStock: (product.initialStock || 0) - item.quantity,
+      },
+    });
+
+    const sale = await prisma.sales.create({
+      data: {
+        code: item.code,
+        branch: saleMeta.branch,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice,
+        soldAt: new Date(saleMeta.soldAt || new Date()),
+
+        product: { connect: { id: product.id } },
+        seller: { connect: { id: saleMeta.sellerId } },
+        shop: { connect: { id: saleMeta.shopId } },
+
+        ...(customerRecord && { customer: { connect: { id: customerRecord.id } } }),
+
+        name: product.name,
+        purchasePrice: product.purchasePrice,
+        salesPrice: product.salesPrice,
+        discount: product.discount,
+        includeVAT: product.includeVAT,
+        batchNo: product.batchNo,
+        serialNoOrIMEI: product.serialNoOrIMEI,
+        description: product.description,
+        itemUnit: product.itemUnit,
+        itemCategory: product.itemCategory,
+        size: product.size,
+        wholesalePrice: product.wholesalePrice,
+        mrp: product.mrp,
+      },
+    });
+
+    createdSales.push(sale);
   }
 
-  // Deduct stock
-  await prisma.product.update({
-    where: { code: product.code },
-    data: {
-      initialStock: (product.initialStock || 0) - data.quantity,
-    },
-  });
-
-  // Create sale with product snapshot and correct relation
-  return await prisma.sales.create({
-    data: {
-      // productId: product.id, // Store the actual relation ID
-      code: data.code,
-      // sellerId: data.sellerId,
-      // shopId: data.shopId,
-      branch: data.branch,
-      quantity: data.quantity,
-      totalPrice: data.totalPrice,
-      soldAt: new Date(),
-
-        // Connect to the existing product
-        product: {
-          connect: { id: product.id }, // This ensures you're linking to the existing product
-        },
-        seller: {
-          connect: {
-            id: data.sellerId, // connect the seller by their unique ID
-          },
-        },
-          // Shop relation
-          shop: {
-            connect: {
-              id: data.shopId,
-            },
-          },
-    
-      
-      // Snapshot from product
-      name: product.name,
-      purchasePrice: product.purchasePrice,
-      salesPrice: product.salesPrice,
-      discount: product.discount,
-      includeVAT: product.includeVAT,
-      batchNo: product.batchNo,
-      serialNoOrIMEI: product.serialNoOrIMEI,
-      description: product.description,
-      itemUnit: product.itemUnit,
-      itemCategory: product.itemCategory,
-      size: product.size,
-      wholesalePrice: product.wholesalePrice,
-      mrp: product.mrp,
-    },
-    
-  });
+  return createdSales;
 };
+
 
 
 // Get All Sales

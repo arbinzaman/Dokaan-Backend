@@ -182,6 +182,8 @@ class ProductController {
           productName: product.name,
           productCode: product.code,
           brand: product.brandCode,
+          itemCategory: product.itemCategory,
+          barcode: product.code,
           purchasePrice: product.purchasePrice,
           salesPrice: product.salesPrice,
           shopAddress,
