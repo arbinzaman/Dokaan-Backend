@@ -10,7 +10,8 @@ import {
   getMonthlySalesStats,
   getTotalSales,
   getCategoryWiseSales,
-  getTotalRevenue,
+  getTotalRevenueAndGrowth,
+  getTotalDailySalesCount,
 } from "../services/sales.services.js";
 
 class SalesController {
@@ -97,22 +98,21 @@ class SalesController {
   }
 
   static async getTotalRevenue(req, res) {
-    const { shopId } = req.query;
-    console.log(shopId);
-  
-    if (!shopId) {
-      return res.status(400).json({ message: "Missing shopId in query" });
-    }
-  
-    try {
-      const parsedShopId = BigInt(shopId); // Fix the BigInt conversion issue
-      const { totalRevenue } = await getTotalRevenue(parsedShopId);
-      return res.json({ totalRevenue });
-    } catch (error) {
-      console.error("Get Total Revenue Error:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
+  const { shopId } = req.query;
+  if (!shopId) {
+    return res.status(400).json({ message: "Missing shopId in query" });
   }
+
+  try {
+    const parsedShopId = BigInt(shopId);
+    const data = await getTotalRevenueAndGrowth(parsedShopId);
+    return res.json(data); // returns { totalRevenue, salesGrowth }
+  } catch (error) {
+    console.error("Get Total Revenue Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 
   static async getSalesStats(req, res) {
     const { shopId } = req.query;
@@ -161,6 +161,23 @@ class SalesController {
     }
   }
   
+  static async getTotalDailySalesCount(req, res) {
+    try {
+      const { shopId} = req.query;
+  
+      if (!shopId ) {
+        return res.status(400).json({ message: "shopId and date are required query parameters" });
+      }
+  
+      const result = await getTotalDailySalesCount(shopId);
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Get Total Daily Sales Count Error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+  
+
 }
 
 export default SalesController;

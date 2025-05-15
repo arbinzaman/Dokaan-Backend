@@ -11,6 +11,7 @@ router.get("/stats",  SalesController.getStats);
 router.get("/stats-by-month",  SalesController.getSalesStats);
 router.get("/total", SalesController.getTotalSalesAmount);
 router.get("/total-revenue", SalesController.getTotalRevenue);
+router.get("/total-sales-count", SalesController.getTotalDailySalesCount);
 router.get('/category-wise', SalesController.getSalesByCategory);
 router.get("/:id", authMiddleware, SalesController.getById);
 router.put("/:id", authMiddleware, SalesController.update);

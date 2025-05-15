@@ -1,9 +1,6 @@
 import prisma from "../config/db.config.js";
 
-// Create Sale (for each product in array)
 export const createSale = async (data) => {
-  console.log(data);
-
   const { products, customer, ...saleMeta } = data;
 
   // --- Handle customer logic ---
@@ -37,11 +34,15 @@ export const createSale = async (data) => {
       where: { code: item.code },
     });
 
-    if (!product) throw new Error(`Product not found: ${item.code}`);
-    if ((product.initialStock || 0) < item.quantity) {
-      throw new Error(`Not enough stock for product: ${item.productName}`);
+    if (!product) {
+      throw new Error(`Product not found: ${item.code}`);
     }
 
+    if ((product.initialStock || 0) < item.quantity) {
+      throw new Error(`Not enough stock for product: ${product.name}`);
+    }
+
+    // Update product stock
     await prisma.product.update({
       where: { code: product.code },
       data: {
@@ -49,6 +50,7 @@ export const createSale = async (data) => {
       },
     });
 
+    // Create sale
     const sale = await prisma.sales.create({
       data: {
         code: item.code,
@@ -79,12 +81,50 @@ export const createSale = async (data) => {
       },
     });
 
+    // Update CustomerPurchase entry if customer exists
+    if (customerRecord) {
+      const dokaanId = saleMeta.shopId;
+
+      const existingPurchase = await prisma.customerPurchase.findUnique({
+        where: {
+          customerId_dokaanId_productId: {
+            customerId: customerRecord.id,
+            dokaanId: dokaanId,
+            productId: product.id,
+          },
+        },
+      });
+
+      if (existingPurchase) {
+        await prisma.customerPurchase.update({
+          where: {
+            customerId_dokaanId_productId: {
+              customerId: customerRecord.id,
+              dokaanId: dokaanId,
+              productId: product.id,
+            },
+          },
+          data: {
+            purchaseCount: existingPurchase.purchaseCount + item.quantity,
+          },
+        });
+      } else {
+        await prisma.customerPurchase.create({
+          data: {
+            customerId: customerRecord.id,
+            dokaanId: dokaanId,
+            productId: product.id,
+            purchaseCount: item.quantity,
+          },
+        });
+      }
+    }
+
     createdSales.push(sale);
   }
 
   return createdSales;
 };
-
 
 
 // Get All Sales
@@ -402,10 +442,25 @@ export const getCategoryWiseSales = async (shopId) => {
 };
 
 
-export const getTotalRevenue = async (parsedShopId) => {
-  const sales = await prisma.sales.findMany({
+export const getTotalRevenueAndGrowth = async (shopId) => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-based
+
+  const currentMonthStart = new Date(year, month, 1);
+  const nextMonthStart = new Date(year, month + 1, 1);
+
+  const previousMonthStart = new Date(year, month - 1, 1);
+  const thisMonthStart = currentMonthStart;
+
+  // Get sales for current month
+  const currentSales = await prisma.sales.findMany({
     where: {
-      shopId: parsedShopId,
+      shopId,
+      soldAt: {
+        gte: currentMonthStart,
+        lt: nextMonthStart,
+      },
     },
     select: {
       salesPrice: true,
@@ -413,15 +468,85 @@ export const getTotalRevenue = async (parsedShopId) => {
     },
   });
 
-  let totalRevenue = 0;
+  // Get sales for previous month
+  const previousSales = await prisma.sales.findMany({
+    where: {
+      shopId,
+      soldAt: {
+        gte: previousMonthStart,
+        lt: thisMonthStart,
+      },
+    },
+    select: {
+      salesPrice: true,
+      purchasePrice: true,
+    },
+  });
 
-  for (const sale of sales) {
-    const revenue = sale.salesPrice - sale.purchasePrice;
-    totalRevenue += revenue;
+  // Helper to calculate total revenue for sales array
+  const calculateRevenue = (sales) =>
+    sales.reduce((sum, s) => sum + (s.salesPrice - s.purchasePrice), 0);
+
+  const currentTotalRevenue = calculateRevenue(currentSales);
+  const previousTotalRevenue = calculateRevenue(previousSales);
+
+  let growth = 0;
+  if (previousTotalRevenue > 0) {
+    growth = ((currentTotalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100;
   }
 
-  return { totalRevenue };
+  return {
+    totalRevenue: currentTotalRevenue,
+    salesGrowth: growth.toFixed(1) + '%',
+  };
 };
+
+export const getTotalDailySalesCount = async () => {
+  // Count total sales records
+  const totalSales = await prisma.sales.count();
+
+  // Format today's date as "May 15, 2025"
+  const date = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  // Group sales by date (soldAt), sum totalPrice
+  const rawSalesData = await prisma.sales.groupBy({
+    by: ['soldAt'],
+    _sum: {
+      totalPrice: true,
+    },
+  });
+
+  // Initialize days of week with zero sales (Mon to Sun)
+  const daysOfWeek = [
+    { name: 'Mon', sales: 0 },
+    { name: 'Tue', sales: 0 },
+    { name: 'Wed', sales: 0 },
+    { name: 'Thu', sales: 0 },
+    { name: 'Fri', sales: 0 },
+    { name: 'Sat', sales: 0 },
+    { name: 'Sun', sales: 0 },
+  ];
+
+  // Aggregate sales per weekday
+  for (const sale of rawSalesData) {
+    const saleDate = new Date(sale.soldAt);
+    // JS getDay(): Sunday=0, Monday=1 ... Saturday=6
+    // Shift so Monday=0 ... Sunday=6
+    const dayIndex = (saleDate.getDay() + 6) % 7;
+    daysOfWeek[dayIndex].sales += sale._sum.totalPrice ?? 0;
+  }
+
+  return {
+    totalSales,
+    date,
+    dailySalesData: daysOfWeek,
+  };
+}
+
 
 
 // // Get Top Selling Products by Product Code
