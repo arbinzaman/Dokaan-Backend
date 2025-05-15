@@ -14,4 +14,6 @@ model Dokaan {
   products               Product[]
   sales                  Sales[]
   employees              User[]    @relation("DokaanEmployeeRelation")
+  customerPurchases      CustomerPurchase[]
+
 }
