@@ -22,8 +22,16 @@ class CustomerController {
   }
 
   static async getAll(req, res) {
+    // console.log(req, res);
     try {
-      const customers = await getAllCustomersWithDetails();
+      const { year, month, day } = req.query;
+      const filters = {
+        year: year ? parseInt(year) : undefined,
+        month: month || undefined,
+        day: day ? parseInt(day) : undefined,
+      };
+  
+      const customers = await getAllCustomersWithDetails(filters);
       return res.status(200).json({ status: 200, data: customers });
     } catch (error) {
       console.error("Get Customers Error:", error);
@@ -33,6 +41,7 @@ class CustomerController {
       });
     }
   }
+  
 
   static async getById(req, res) {
     try {

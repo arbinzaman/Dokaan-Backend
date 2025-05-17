@@ -6,40 +6,79 @@ export const createCustomer = async (data) => {
 };
 
 // Get all customers with purchase details and favorite status
-export const getAllCustomersWithDetails = async () => {
-    const customers = await prisma.customer.findMany({
-      include: {
-        purchaseStats: {
-          include: {
-            dokaan: true,
-            product: true,
-          },
+export const getAllCustomersWithDetails = async (filters = {}) => {
+  const { year, month, day } = filters;
+
+  let dateFilter = {};
+  if (year) {
+    // If month is a string like "January", convert to index
+    let monthIndex = 0;
+
+    if (typeof month === "string") {
+      const parsedDate = new Date(`${month} 1, ${year}`);
+      if (!isNaN(parsedDate)) {
+        monthIndex = parsedDate.getMonth();
+      }
+    } else if (!isNaN(month)) {
+      monthIndex = Number(month) - 1; // Convert 1-based to 0-based index
+    }
+
+    const safeDay = !isNaN(day) ? Number(day) : 1;
+
+    const startDate = new Date(year, monthIndex, safeDay);
+    const endDate = new Date(
+      year,
+      typeof month !== "undefined" ? monthIndex + 1 : 11,
+      day ? safeDay + 1 : 31
+    );
+
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      dateFilter.createdAt = {
+        gte: startDate,
+        lt: endDate,
+      };
+    }
+  }
+
+  const customers = await prisma.customer.findMany({
+    where: dateFilter,
+    include: {
+      purchaseStats: {
+        include: {
+          dokaan: true,
+          product: true,
         },
       },
-    });
+    },
+  });
   
-    return customers.map((customer) => {
-      const shopSet = new Set(customer.purchaseStats.map((stat) => stat.dokaanId));
-      const isFavorite = shopSet.size > 5; // CHANGED LOGIC
+
+  return customers.map((customer) => {
+    const shopSet = new Set(customer.purchaseStats.map((stat) => stat.dokaanId));
+    const isFavorite = shopSet.size > 5;
   
-      const purchases = customer.purchaseStats.map((stat) => ({
-        dokaanName: stat.dokaan.dokaan_name,
-        productName: stat.product.name,
-        purchaseCount: stat.purchaseCount,
-      }));
+    const purchases = customer.purchaseStats.map((stat) => ({
+      dokaanName: stat.dokaan.dokaan_name,
+      productName: stat.product.name,
+      purchaseCount: stat.purchaseCount,
+    }));
   
-      return {
-        id: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        email: customer.email,
-        address: customer.address,
-        favorite: isFavorite,
-        purchases,
-      };
-    });
-  };
+    return {
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email,
+      address: customer.address,
+      favorite: isFavorite,
+      purchases,
+      createdAt: customer.createdAt, // ✅ CRITICAL
+    };
+  });
   
+  
+};
+
+
 
 // Get a single customer by ID
 export const getCustomerById = async (id) => {
