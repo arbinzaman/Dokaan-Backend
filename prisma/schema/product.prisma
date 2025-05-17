@@ -30,4 +30,6 @@ model Product {
   owner                   User      @relation(fields: [ownerId], references: [id])
   shop                    Dokaan    @relation(fields: [shopId], references: [id])
   sales                   Sales[]
+  customerPurchases       CustomerPurchase[] 
+
 }

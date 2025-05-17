@@ -21,6 +21,12 @@ model Sales {
   shopId         BigInt   @map("shop_id")
   size           String?
   wholesalePrice Float?
+
+  // New relation
+  customerId     BigInt?  @map("customer_id")
+  customer       Customer? @relation(fields: [customerId], references: [id])
+
+  // Existing relations
   product        Product  @relation(fields: [productId], references: [id])
   seller         User     @relation("UserSales", fields: [sellerId], references: [id])
   shop           Dokaan   @relation(fields: [shopId], references: [id], onDelete: Cascade)

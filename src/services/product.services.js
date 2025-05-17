@@ -203,7 +203,69 @@ export const getProductByBarcode = async (barcode) => {
   }
 };
 
+// services/product.services.js
 export const getTotalProductCount = async () => {
-  const count = await prisma.product.count();
-  return count;
+  const result = await prisma.product.groupBy({
+    by: ['shopId'],
+    _count: {
+      id: true,
+    },
+  });
+
+  // Result: [{ shopId: 1, _count: { id: 12 } }, ...]
+  return result.map((entry) => ({
+    shopId: entry.shopId,
+    totalProducts: entry._count.id,
+  }));
 };
+
+
+// services/product.services.js
+export const getFilteredProducts = async (categories, shopId) => {
+  try {
+    const filters = {};
+
+    if (categories) {
+      const categoryArray = categories.split(",").map((cat) => cat.trim());
+      filters.itemCategory = { in: categoryArray };
+    }
+
+    if (shopId && !isNaN(Number(shopId))) {
+      filters.shopId = Number(shopId);
+    }
+
+    const products = await prisma.product.findMany({
+      where: filters,
+      include: {
+        shop: true,
+        owner: true,
+        sales: true,
+      },
+    });
+
+    // Group by shopId
+    const groupedByShop = {};
+
+    products.forEach((product) => {
+      const shopId = product.shopId;
+      if (!groupedByShop[shopId]) {
+        groupedByShop[shopId] = {
+          shopId,
+          shopName: product.shop?.name,
+          products: [],
+        };
+      }
+
+      groupedByShop[shopId].products.push({
+        ...product,
+        salesCount: product.sales.length,
+      });
+    });
+
+    return Object.values(groupedByShop);
+  } catch (error) {
+    console.error("Get Filtered Products Error:", error);
+    throw error;
+  }
+};
+

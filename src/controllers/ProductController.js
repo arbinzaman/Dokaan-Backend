@@ -1,3 +1,4 @@
+import prisma from "../config/db.config.js";
 import {
   createProduct,
   updateProduct,
@@ -7,6 +8,7 @@ import {
   getProductByBarcode,
   getProductsByEmail,
   getTotalProductCount,
+  getFilteredProducts,
 } from "../services/product.services.js";
 
 class ProductController {
@@ -169,7 +171,9 @@ class ProductController {
         });
       }
 
-      const shopAddress = product.shop ? product.shop.address : 'Address not available';
+      const shopAddress = product.shop
+        ? product.shop.address
+        : "Address not available";
 
       return res.status(200).json({
         status: 200,
@@ -178,10 +182,12 @@ class ProductController {
           productName: product.name,
           productCode: product.code,
           brand: product.brandCode,
+          itemCategory: product.itemCategory,
+          barcode: product.code,
           purchasePrice: product.purchasePrice,
           salesPrice: product.salesPrice,
           shopAddress,
-          ownerName: product.owner ? product.owner.name : 'Owner not available',
+          ownerName: product.owner ? product.owner.name : "Owner not available",
           salesCount: product.salesCount,
           sales: product.sales,
         },
@@ -194,6 +200,7 @@ class ProductController {
       });
     }
   }
+  // controllers/product.controller.js
   static async getTotalProductCount(req, res) {
     try {
       const count = await getTotalProductCount();
@@ -206,7 +213,52 @@ class ProductController {
       console.error("Get Total Product Count Error:", error);
       return res.status(500).json({
         status: 500,
-        message: 'Failed to fetch total product count',
+        message: "Failed to fetch total product count",
+      });
+    }
+  }
+
+  static async getFiltered(req, res) {
+    // console.log(req.query);
+    try {
+      const { shopId, categories } = req.query;
+      console.log(shopId, categories);
+      const filters = {};
+
+      if (shopId && !isNaN(shopId)) {
+        filters.shopId = Number(shopId);
+      }
+
+      if (categories) {
+        const categoryArray = categories.split(",").map((cat) => cat.trim());
+        filters.itemCategory = {
+          in: categoryArray,
+        };
+      }
+
+      const products = await prisma.product.findMany({
+        where: filters,
+        include: {
+          shop: true,
+          owner: true,
+          sales: true,
+        },
+      });
+
+      const formatted = products.map((product) => ({
+        ...product,
+        salesCount: product.sales.length,
+      }));
+
+      return res.status(200).json({
+        status: 200,
+        data: formatted,
+      });
+    } catch (error) {
+      console.error("Get Filtered Products Error:", error);
+      return res.status(500).json({
+        status: 500,
+        message: "Internal Server Error",
       });
     }
   }

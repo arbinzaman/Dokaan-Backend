@@ -10,11 +10,13 @@ import {
   getMonthlySalesStats,
   getTotalSales,
   getCategoryWiseSales,
-  getTotalRevenue,
+  getTotalRevenueAndGrowth,
+  getTotalDailySalesCount,
 } from "../services/sales.services.js";
 
 class SalesController {
   static async create(req, res) {
+    // console.log(req.body);
     try {
       const sale = await createSale(req.body);
       return res.status(201).json(sale);
@@ -26,13 +28,19 @@ class SalesController {
 
   static async getAll(req, res) {
     try {
-      const sales = await getAllSales();
+      const { shopId, year, month, date } = req.query;
+      if (!shopId) {
+        return res.status(400).json({ message: "shopId is required" });
+      }
+
+      const sales = await getAllSales(shopId, year, month, date);
       return res.json(sales);
     } catch (error) {
       console.error("Get Sales Error:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   }
+  
 
   static async getById(req, res) {
     try {
@@ -90,45 +98,86 @@ class SalesController {
   }
 
   static async getTotalRevenue(req, res) {
-    try {
-      const { totalRevenue } = await getTotalRevenue();
-      return res.json({ totalRevenue });
-    } catch (error) {
-      console.error("Get Total Revenue Error:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
+  const { shopId } = req.query;
+  if (!shopId) {
+    return res.status(400).json({ message: "Missing shopId in query" });
   }
-  
+
+  try {
+    const parsedShopId = BigInt(shopId);
+    const data = await getTotalRevenueAndGrowth(parsedShopId);
+    return res.json(data); // returns { totalRevenue, salesGrowth }
+  } catch (error) {
+    console.error("Get Total Revenue Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 
   static async getSalesStats(req, res) {
+    const { shopId } = req.query;
+    console.log(shopId);
+  
+    if (!shopId) {
+      return res.status(400).json({ message: "Missing shopId in query" });
+    }
+  
     try {
-      const data = await getMonthlySalesStats();
+      const parsedShopId = BigInt(shopId);
+      const data = await getMonthlySalesStats(parsedShopId);
       res.status(200).json(data);
     } catch (error) {
       console.error("Sales stats error:", error);
       res.status(500).json({ message: "Failed to fetch sales statistics" });
     }
   }
-
+  
   static async getTotalSalesAmount(req, res) {
     try {
-      const data = await getTotalSales();
+      const shopId = req.query.shopId ;
+      console.log(shopId);
+      if (!shopId) {
+        return res.status(400).json({ message: "Missing shopId parameter" });
+      }
+  
+      const data = await getTotalSales(shopId);
       res.status(200).json(data);
     } catch (error) {
       console.error("Total sales fetch error:", error);
       res.status(500).json({ message: "Failed to fetch total sales" });
     }
   }
+  
 
- static async getSalesByCategory (req, res){
+  static async getSalesByCategory(req, res) {
+    const { shopId } = req.query; // Get shopId from query params
+    console.log(shopId);
     try {
-      const data = await getCategoryWiseSales();
+      const data = await getCategoryWiseSales(shopId); // Pass shopId to the service function
       res.status(200).json(data);
     } catch (error) {
       console.error('Error fetching category-wise sales:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   }
+  
+  static async getTotalDailySalesCount(req, res) {
+    try {
+      const { shopId} = req.query;
+  
+      if (!shopId ) {
+        return res.status(400).json({ message: "shopId and date are required query parameters" });
+      }
+  
+      const result = await getTotalDailySalesCount(shopId);
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Get Total Daily Sales Count Error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+  
+
 }
 
 export default SalesController;
