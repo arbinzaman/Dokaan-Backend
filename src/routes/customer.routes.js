@@ -5,6 +5,7 @@ const router = Router();
 
 router.post("/", CustomerController.create);
 router.get("/", CustomerController.getAll);
+router.get("/growth", CustomerController.getShopGrowthStats);
 router.get("/stats", CustomerController.getStats);
 router.get("/:id", CustomerController.getById);
 router.put("/:id", CustomerController.update);

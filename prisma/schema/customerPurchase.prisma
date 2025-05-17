@@ -10,6 +10,7 @@ model CustomerPurchase {
   productId     BigInt
 
   purchaseCount Int      @default(0)
+  createdAt     DateTime @default(now()) // ✅ Add this
 
   @@unique([customerId, dokaanId, productId])
 }
