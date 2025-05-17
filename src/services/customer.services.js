@@ -164,3 +164,59 @@ export const getCustomerStats = async (shopId) => {
     };
   };
   
+// Get customer growth stats month-wise
+export const getCustomerGrowthByShop = async (shopId) => {
+  if (!shopId) throw new Error("shopId is required");
+
+  const customers = await prisma.customer.findMany({
+    where: {
+      purchaseStats: {
+        some: {
+          dokaanId: Number(shopId),
+        },
+      },
+    },
+    select: {
+      id: true,
+      purchaseStats: {
+        where: {
+          dokaanId: Number(shopId),
+        },
+        select: {
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        take: 1,
+      },
+    },
+  });
+
+  const monthlyCounts = Array(12).fill(0);
+  let latestMonth = null;
+
+  customers.forEach((customer) => {
+    const firstPurchase = customer.purchaseStats[0];
+    if (!firstPurchase) return;
+
+    const createdAt = new Date(firstPurchase.createdAt);
+    const month = createdAt.getMonth(); // 0 = Jan, 11 = Dec
+    monthlyCounts[month]++;
+    if (!latestMonth || createdAt > latestMonth) {
+      latestMonth = createdAt;
+    }
+  });
+
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const growthData = monthLabels.map((month, index) => ({
+    month,
+    users: monthlyCounts[index],
+  }));
+
+  return {
+    growthData,
+    lastUpdatedMonth: latestMonth ? monthLabels[latestMonth.getMonth()] : null,
+  };
+};
+

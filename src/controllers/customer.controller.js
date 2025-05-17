@@ -5,6 +5,7 @@ import {
   updateCustomer,
   deleteCustomer,
   getCustomerStats,
+  getCustomerGrowthByShop,
 } from "../services/customer.services.js";
 
 class CustomerController {
@@ -30,7 +31,7 @@ class CustomerController {
         month: month || undefined,
         day: day ? parseInt(day) : undefined,
       };
-  
+
       const customers = await getAllCustomersWithDetails(filters);
       return res.status(200).json({ status: 200, data: customers });
     } catch (error) {
@@ -41,7 +42,6 @@ class CustomerController {
       });
     }
   }
-  
 
   static async getById(req, res) {
     try {
@@ -49,7 +49,9 @@ class CustomerController {
       const customer = await getCustomerById(id);
 
       if (!customer) {
-        return res.status(404).json({ status: 404, message: "Customer not found" });
+        return res
+          .status(404)
+          .json({ status: 404, message: "Customer not found" });
       }
 
       return res.status(200).json({ status: 200, data: customer });
@@ -107,6 +109,36 @@ class CustomerController {
       return res.status(500).json({
         status: 500,
         message: "Failed to fetch customer stats",
+      });
+    }
+  }
+  // Inside CustomerController class
+  static async getShopGrowthStats(req, res) {
+    try {
+      const { shopId } = req.query;
+
+      if (!shopId) {
+        return res.status(400).json({
+          status: 400,
+          message: "Missing shopId query parameter",
+        });
+      }
+
+      const { growthData, lastUpdatedMonth } = await getCustomerGrowthByShop(
+        shopId
+      );
+
+      return res.status(200).json({
+        status: "success",
+        message: "Shop-wise user growth data fetched successfully",
+        data: growthData,
+        lastUpdatedMonth,
+      });
+    } catch (error) {
+      console.error("Get Shop Growth Stats Error:", error);
+      return res.status(500).json({
+        status: 500,
+        message: "Failed to fetch shop growth stats",
       });
     }
   }
