@@ -23,25 +23,34 @@ class CustomerController {
   }
 
   static async getAll(req, res) {
-    // console.log(req, res);
-    try {
-      const { year, month, day } = req.query;
-      const filters = {
-        year: year ? parseInt(year) : undefined,
-        month: month || undefined,
-        day: day ? parseInt(day) : undefined,
-      };
+  try {
+    const { year, month, day, shopId } = req.query;
 
-      const customers = await getAllCustomersWithDetails(filters);
-      return res.status(200).json({ status: 200, data: customers });
-    } catch (error) {
-      console.error("Get Customers Error:", error);
-      return res.status(500).json({
-        status: 500,
-        message: "Failed to fetch customers",
+    if (!shopId) {
+      return res.status(400).json({
+        status: 400,
+        message: "Missing shopId query parameter",
       });
     }
+
+    const filters = {
+      year: year ? parseInt(year) : undefined,
+      month: month || undefined,
+      day: day ? parseInt(day) : undefined,
+      shopId: parseInt(shopId),
+    };
+
+    const customers = await getAllCustomersWithDetails(filters);
+    return res.status(200).json({ status: 200, data: customers });
+  } catch (error) {
+    console.error("Get Customers Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Failed to fetch customers",
+    });
   }
+}
+
 
   static async getById(req, res) {
     try {
