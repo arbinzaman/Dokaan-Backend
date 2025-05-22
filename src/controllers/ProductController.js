@@ -75,21 +75,23 @@ class ProductController {
   }
 
   static async getAll(req, res) {
-    try {
-      const products = await getAllProducts();
+  try {
+    const shopId = req.query.shopId ? parseInt(req.query.shopId, 10) : undefined;
+    const products = await getAllProducts(shopId);
 
-      return res.status(200).json({
-        status: 200,
-        data: products,
-      });
-    } catch (error) {
-      console.error("Get All Products Error:", error);
-      return res.status(500).json({
-        status: 500,
-        message: "Internal Server Error",
-      });
-    }
+    return res.status(200).json({
+      status: 200,
+      data: products,
+    });
+  } catch (error) {
+    console.error("Get All Products Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Internal Server Error",
+    });
   }
+}
+
 
   static async getProductsByEmail(req, res) {
     try {

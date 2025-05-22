@@ -100,9 +100,10 @@ export const deleteProduct = async (id) => {
   }
 };
 
-export const getAllProducts = async () => {
+export const getAllProducts = async (shopId) => {
   try {
     const products = await prisma.product.findMany({
+      where: shopId ? { shopId } : undefined,
       include: {
         shop: true,
         owner: true,
@@ -119,6 +120,7 @@ export const getAllProducts = async () => {
     throw error;
   }
 };
+
 
 export const getProductsByEmail = async (email) => {
   try {
