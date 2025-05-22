@@ -2,9 +2,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import speakeasy from "speakeasy";
 import { registerSchema, loginSchema } from "../validation/authValidation.js";
-import prisma from "../config/db.config.js";// Import other service functions
+import prisma from "../config/db.config.js"; // Import other service functions
 import vine from "@vinejs/vine";
-
 
 // Register User Service
 export const registerUser = async (payload) => {
@@ -22,7 +21,10 @@ export const registerUser = async (payload) => {
   // Encrypt password
   if (validatedPayload.password) {
     const salt = bcrypt.genSaltSync(10);
-    validatedPayload.password = bcrypt.hashSync(validatedPayload.password, salt);
+    validatedPayload.password = bcrypt.hashSync(
+      validatedPayload.password,
+      salt
+    );
   }
 
   // Create user
@@ -35,7 +37,9 @@ export const registerUser = async (payload) => {
     name: user.name,
     role: user.role,
   };
-  const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "365d" });
+  const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+    expiresIn: "365d",
+  });
 
   // Remove sensitive data
   const { password, twoFactorSecret, ...userWithoutSensitiveData } = user;
@@ -53,7 +57,7 @@ export const loginUser = async (payload) => {
   const validator = vine.compile(loginSchema);
   const validatedPayload = await validator.validate(payload);
 
-  // Check if user exists
+  // 1. Find the user
   const user = await prisma.user.findUnique({
     where: { email: validatedPayload.email },
   });
@@ -62,36 +66,64 @@ export const loginUser = async (payload) => {
     throw new Error("User does not exist");
   }
 
-  // Compare password
+  // 2. Check password
   const isMatch = bcrypt.compareSync(validatedPayload.password, user.password);
   if (!isMatch) {
     throw new Error("Incorrect password");
   }
-
-
-  // Fetch or create Dokaan info
-  let dokaan = await prisma.dokaan.findFirst({
-    where: { ownerId: user.id },
-  });
-
-
-  // Issue JWT token
+  // console.log(user);
+  // 3. JWT token
   const tokenPayload = {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
   };
-  const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "365d" });
 
-  // Remove sensitive fields
+  const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+    expiresIn: "365d",
+  });
+
+  // 4. Fetch dokaan as owner
+  const ownedDokaan = await prisma.dokaan.findMany({
+    where: { ownerId: user.id },
+  });
+
+  // 5. If not an owner, fetch employed dokaan
+  let employedDokaan = null;
+  if (!ownedDokaan) {
+    const employment = user.dokaanId
+      ? await prisma.dokaan.findUnique({
+          where: { id: user.dokaanId },
+        })
+      : null;
+// console.log(employment);
+    if (employment) {
+      // employedDokaan = employment;
+
+      // Inject employment details into user
+      user.dokaanId = user.dokaanId;
+      user.profileImageUrl = user.profileImageUrl || null;
+      user.shopRole = user.role || null;
+      user.salary = user.salary || null;
+      user.workStartTime = user.workStartTime || null;
+      user.workEndTime = user.workEndTime || null;
+      user.workDays = user.workDays || null;
+      user.workHours = user.workHours || null;
+      user.workLocation = user.workLocation || null;
+      user.workStatus = user.workStatus || null;
+    }
+  }
+
+  // 6. Strip sensitive fields
   const { password, twoFactorSecret, ...userWithoutSensitiveData } = user;
 
+  // 7. Final Response
   return {
     status: 200,
     message: "Login successful",
     user: userWithoutSensitiveData,
-    dokaan: dokaan,
+    dokaan: ownedDokaan || employedDokaan || null,
     access_token: `Bearer ${token}`,
   };
 };
@@ -113,9 +145,9 @@ export const sendOtpMail = async (userId, email) => {
 
   // Send OTP via email
   await transporter.sendMail({
-    from: `"Dokaan Support Team" <${process.env.EMAIL_USER}>`,  // Sender's email
-    to: email,  // Recipient's email
-    subject: "Your One-Time Password (OTP) for Secure Access",  // Email subject
+    from: `"Dokaan Support Team" <${process.env.EMAIL_USER}>`, // Sender's email
+    to: email, // Recipient's email
+    subject: "Your One-Time Password (OTP) for Secure Access", // Email subject
     text: `Dear User,
 
 We have generated a One-Time Password (OTP) to verify your login or perform a secure action.
@@ -127,7 +159,7 @@ This code is valid for a limited time only. Please use it promptly to complete t
 If you did not request this code, please disregard this email or contact our support team immediately.
 
 Best regards,
-The Dokaan Support Team`,  // Email body
+The Dokaan Support Team`, // Email body
   });
 
   return { status: 200, message: "OTP sent successfully" };
