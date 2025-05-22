@@ -13,6 +13,21 @@ class EmployeeController {
       return res.status(201).json({ status: 201, data: employee });
     } catch (error) {
       console.error("Create Employee Error:", error);
+
+      if (error.statusCode === 409) {
+        return res.status(409).json({
+          status: 409,
+          message: error.message,
+        });
+      }
+
+      if (error.name === "ValidationError") {
+        return res.status(400).json({
+          status: 400,
+          message: error.message,
+        });
+      }
+
       return res.status(500).json({
         status: 500,
         message: "Failed to create employee",
@@ -44,6 +59,12 @@ class EmployeeController {
   static async getOne(req, res) {
     try {
       const employee = await getEmployeeById(req.params.id);
+      if (!employee) {
+        return res.status(404).json({
+          status: 404,
+          message: "Employee not found",
+        });
+      }
       return res.status(200).json({ status: 200, data: employee });
     } catch (error) {
       console.error("Get Employee Error:", error);
