@@ -57,7 +57,6 @@ export const loginUser = async (payload) => {
   const validator = vine.compile(loginSchema);
   const validatedPayload = await validator.validate(payload);
 
-  // 1. Find the user
   const user = await prisma.user.findUnique({
     where: { email: validatedPayload.email },
   });
@@ -66,13 +65,11 @@ export const loginUser = async (payload) => {
     throw new Error("User does not exist");
   }
 
-  // 2. Check password
   const isMatch = bcrypt.compareSync(validatedPayload.password, user.password);
   if (!isMatch) {
     throw new Error("Incorrect password");
   }
-  // console.log(user);
-  // 3. JWT token
+
   const tokenPayload = {
     id: user.id,
     email: user.email,
@@ -84,49 +81,48 @@ export const loginUser = async (payload) => {
     expiresIn: "365d",
   });
 
-  // 4. Fetch dokaan as owner
   const ownedDokaan = await prisma.dokaan.findMany({
     where: { ownerId: user.id },
   });
 
-  // 5. If not an owner, fetch employed dokaan
-  let employedDokaan = null;
-  if (!ownedDokaan) {
-    const employment = user.dokaanId
-      ? await prisma.dokaan.findUnique({
-          where: { id: user.dokaanId },
-        })
-      : null;
-// console.log(employment);
-    if (employment) {
-      // employedDokaan = employment;
+  let dokaanToSend = [];
 
-      // Inject employment details into user
-      user.dokaanId = user.dokaanId;
-      user.profileImageUrl = user.profileImageUrl || null;
-      user.shopRole = user.role || null;
-      user.salary = user.salary || null;
-      user.workStartTime = user.workStartTime || null;
-      user.workEndTime = user.workEndTime || null;
-      user.workDays = user.workDays || null;
-      user.workHours = user.workHours || null;
-      user.workLocation = user.workLocation || null;
-      user.workStatus = user.workStatus || null;
+  // If not an owner, check if they're an employee
+  if (!ownedDokaan || ownedDokaan.length === 0) {
+    if (user.dokaanId) {
+      const employment = await prisma.dokaan.findUnique({
+        where: { id: user.dokaanId },
+      });
+
+      if (employment) {
+        dokaanToSend = [employment];
+
+        // Enrich user object with employment details
+        user.shopRole = user.role || null;
+        user.salary = user.salary || null;
+        user.workStartTime = user.workStartTime || null;
+        user.workEndTime = user.workEndTime || null;
+        user.workDays = user.workDays || null;
+        user.workHours = user.workHours || null;
+        user.workLocation = user.workLocation || null;
+        user.workStatus = user.workStatus || null;
+      }
     }
+  } else {
+    dokaanToSend = ownedDokaan;
   }
 
-  // 6. Strip sensitive fields
   const { password, twoFactorSecret, ...userWithoutSensitiveData } = user;
 
-  // 7. Final Response
   return {
     status: 200,
     message: "Login successful",
     user: userWithoutSensitiveData,
-    dokaan: ownedDokaan || employedDokaan || null,
+    dokaan: dokaanToSend,
     access_token: `Bearer ${token}`,
   };
 };
+
 
 // Send OTP via email
 export const sendOtpMail = async (userId, email) => {
