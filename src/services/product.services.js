@@ -13,6 +13,7 @@ export const createProduct = async (data, files) => {
       description,
       shopId,
       ownerId,
+      itemCategory, // <-- Accept itemCategory from request
     } = data;
 
     let imageUrl = null;
@@ -51,6 +52,7 @@ export const createProduct = async (data, files) => {
         imageUrl,
         shopId: Number(shopId),
         ownerId: Number(ownerId),
+        itemCategory: itemCategory || null, // <-- Save itemCategory if provided
       },
     });
   } catch (error) {
@@ -58,6 +60,7 @@ export const createProduct = async (data, files) => {
     throw error;
   }
 };
+
 
 export const updateProduct = async (id, data, files) => {
   try {
