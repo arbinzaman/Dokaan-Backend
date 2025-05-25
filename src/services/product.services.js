@@ -62,7 +62,7 @@ export const createProduct = async (data, files) => {
 };
 
 
-export const updateProduct = async (id, data, files) => {
+export const updateProduct = async (code, data, files) => {
   try {
     let imageUrl = null;
 
@@ -79,8 +79,16 @@ export const updateProduct = async (id, data, files) => {
       imageUrl = uploadResult.secure_url;
     }
 
+    const existing = await prisma.product.findUnique({
+      where: { code },
+    });
+
+    if (!existing) {
+      throw new Error(`Product with code ${code} not found`);
+    }
+
     return await prisma.product.update({
-      where: { id: Number(id) },
+      where: { code },
       data: {
         ...data,
         imageUrl: imageUrl || undefined,
@@ -91,6 +99,7 @@ export const updateProduct = async (id, data, files) => {
     throw error;
   }
 };
+
 
 export const deleteProduct = async (id) => {
   try {
