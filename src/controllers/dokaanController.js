@@ -14,10 +14,13 @@ class DokaanController {
   static async create(req, res) {
     try {
       const data = req.body;
+      const userEmail = req.params.email; // Get email from request params
 
+      console.log(data, userEmail);
       // Call service function to create Dokaan and owner
       const { dokaan, user, access_token } = await createDokaanWithNewOwner(
         data
+      , userEmail
       );
 
       // Send response

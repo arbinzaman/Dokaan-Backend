@@ -3,7 +3,7 @@ import DokaanController from "../controllers/dokaanController.js";
 
 const router = Router();
 
-router.post("/", DokaanController.create);
+router.post("/:email", DokaanController.create);
 router.put("/:id", DokaanController.update);
 router.delete("/:id", DokaanController.delete);
 router.get("/", DokaanController.getAll);

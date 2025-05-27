@@ -5,10 +5,11 @@ import jwt from "jsonwebtoken";
 import { generateFileName, imageValidator } from "../utils/helper.js";
 
 // Create Dokaan with New Owner
-export const createDokaanWithNewOwner = async (data) => {
+export const createDokaanWithNewOwner = async (data,userEmail) => {
   const {
     name,
-    email,
+    // userEmail,
+    email:dataEmail, // Use email from data
     password,
     dokaan_name,
     dokaan_location,
@@ -17,7 +18,8 @@ export const createDokaanWithNewOwner = async (data) => {
     dokaan_type,
     dokaanImage, // Expect image from the controller
   } = data;
-
+const email = userEmail || dataEmail// Use email from params or data
+  console.log(data);
   // Check if the user already exists
   let user = await prisma.user.findUnique({ where: { email } });
 
