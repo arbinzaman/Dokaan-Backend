@@ -366,6 +366,7 @@ export const getTopSellingProductsBySeller = async (limit = 5, shopId) => {
 };
 
 export const getMonthlySalesStats = async (shopId) => {
+  console.log(shopId);
   const sales = await prisma.sales.findMany({
     where: {
       shopId: shopId,
@@ -501,42 +502,45 @@ export const getTotalRevenueAndGrowth = async (shopId) => {
   };
 };
 
-export const getTotalDailySalesCount = async () => {
-  // Count total sales records
-  const totalSales = await prisma.sales.count();
+export const getTotalDailySalesCount = async (shopId) => {
+  // Convert shopId to BigInt if needed (depending on how you receive it)
+  const shopIdBigInt = BigInt(shopId);
 
-  // Format today's date as "May 15, 2025"
-  const date = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  // Count total sales for that shop
+  const totalSales = await prisma.sales.count({
+    where: { shopId: shopIdBigInt },
   });
 
-  // Group sales by date (soldAt), sum totalPrice
+  const date = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  // Group sales by soldAt date for the given shopId
   const rawSalesData = await prisma.sales.groupBy({
-    by: ['soldAt'],
+    by: ["soldAt"],
+    where: { shopId: shopIdBigInt },
     _sum: {
       totalPrice: true,
     },
   });
 
-  // Initialize days of week with zero sales (Mon to Sun)
+  // Initialize days of week with zero sales
   const daysOfWeek = [
-    { name: 'Mon', sales: 0 },
-    { name: 'Tue', sales: 0 },
-    { name: 'Wed', sales: 0 },
-    { name: 'Thu', sales: 0 },
-    { name: 'Fri', sales: 0 },
-    { name: 'Sat', sales: 0 },
-    { name: 'Sun', sales: 0 },
+    { name: "Mon", sales: 0 },
+    { name: "Tue", sales: 0 },
+    { name: "Wed", sales: 0 },
+    { name: "Thu", sales: 0 },
+    { name: "Fri", sales: 0 },
+    { name: "Sat", sales: 0 },
+    { name: "Sun", sales: 0 },
   ];
 
-  // Aggregate sales per weekday
+  // Aggregate totalPrice sum per weekday
   for (const sale of rawSalesData) {
     const saleDate = new Date(sale.soldAt);
-    // JS getDay(): Sunday=0, Monday=1 ... Saturday=6
-    // Shift so Monday=0 ... Sunday=6
-    const dayIndex = (saleDate.getDay() + 6) % 7;
+    const dayIndex = (saleDate.getDay() + 6) % 7; // Monday=0 ... Sunday=6
     daysOfWeek[dayIndex].sales += sale._sum.totalPrice ?? 0;
   }
 
@@ -545,7 +549,9 @@ export const getTotalDailySalesCount = async () => {
     date,
     dailySalesData: daysOfWeek,
   };
-}
+};
+
+
 
 
 

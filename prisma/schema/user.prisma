@@ -7,12 +7,19 @@ model User {
   updatedAt        DateTime  @updatedAt
   role             String?
   profileImageUrl  String?
-  dokaanId         BigInt?
-  shopRole         String?
+  dokaanId         BigInt?    // FK to Dokaan (shop)
+  shopRole         String?    // e.g., "employee", "owner"
+  salary           Float?     // New salary field
+  workStartTime   DateTime? // New work start time field
+  workEndTime     DateTime? // New work end time field
+  workDays        String?   // New work days field
+  workHours       String?   // New work hours field
+  workLocation    String?   // New work location field
+  workStatus      String?   // New work status field
   twoFactorEnabled Boolean   @default(false)
   twoFactorSecret  String?
   subscription        Boolean  @default(false)
-  subscriptionStatus  String?  // e.g., "active", "inactive", etc.
+  subscriptionStatus  String?  
   dokaanOwned      Dokaan[]  @relation("DokaanOwnerRelation")
   productsOwned    Product[]
   salesMade        Sales[]   @relation("UserSales")

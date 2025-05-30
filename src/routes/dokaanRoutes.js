@@ -3,11 +3,12 @@ import DokaanController from "../controllers/dokaanController.js";
 
 const router = Router();
 
-router.post("/", DokaanController.create);
+router.post("/:email", DokaanController.create);
 router.put("/:id", DokaanController.update);
 router.delete("/:id", DokaanController.delete);
 router.get("/", DokaanController.getAll);
 router.get("/:id", DokaanController.getById);
+router.get("/user/:email", DokaanController.getDokaansByEmail);
 router.post("/add-employee", DokaanController.addEmployee);
 router.post("/remove-employee", DokaanController.removeEmployee);
 router.post('/add-exiting-user-employee', DokaanController.addEmployeeFromExistingAccount);

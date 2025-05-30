@@ -5,10 +5,11 @@ import jwt from "jsonwebtoken";
 import { generateFileName, imageValidator } from "../utils/helper.js";
 
 // Create Dokaan with New Owner
-export const createDokaanWithNewOwner = async (data) => {
+export const createDokaanWithNewOwner = async (data,userEmail) => {
   const {
     name,
-    email,
+    // userEmail,
+    email:dataEmail, // Use email from data
     password,
     dokaan_name,
     dokaan_location,
@@ -17,7 +18,8 @@ export const createDokaanWithNewOwner = async (data) => {
     dokaan_type,
     dokaanImage, // Expect image from the controller
   } = data;
-
+const email = userEmail || dataEmail// Use email from params or data
+  console.log(data);
   // Check if the user already exists
   let user = await prisma.user.findUnique({ where: { email } });
 
@@ -175,3 +177,39 @@ export const addEmployeeFromExistingAccount = async (email, dokaanId, shopRole) 
     },
   });
 };
+
+
+// Get all Dokaans for a user by email
+export async function getDokaansByUserEmail(email) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        email: email,
+      },
+      include: {
+        dokaanOwned: true,         // Shops the user owns
+        dokaanEmployment: true,    // Shop where the user is an employee
+        // productsOwned: true,       // Products created by the user
+        // salesMade: true,           // Sales made by the user
+      },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Optional: You can structure the response to send only dokaans, or send the whole user with related data
+    return {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      dokaanOwned: user.dokaanOwned,
+      dokaanEmployment: user.dokaanEmployment,
+      productsOwned: user.productsOwned,
+      salesMade: user.salesMade,
+    };
+  } catch (error) {
+    console.error("Error in getDokaansByUserEmail:", error);
+    throw error;
+  }
+}
