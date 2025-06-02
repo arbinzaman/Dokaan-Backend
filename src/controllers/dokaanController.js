@@ -12,35 +12,32 @@ import {
 
 class DokaanController {
   static async create(req, res) {
-    try {
-      const data = req.body;
-      const userEmail = req.params.email; // Get email from request params
+  try {
+    const data = req.body;
+    const userEmail = data.email; // Get email from request body
 
-      console.log(data, userEmail);
-      // Call service function to create Dokaan and owner
-      const { dokaan, user, access_token } = await createDokaanWithNewOwner(
-        data
-      , userEmail
-      );
+    console.log(data, userEmail);
 
-      // Send response
-      return res.status(200).json({
-        status: 200,
-        message: "Dokaan and owner created successfully",
-        data: {
-          dokaan,
-          owner: user,
-        },
-        access_token,
-      });
-    } catch (error) {
-      console.error("Create Dokaan Error:", error);
-      return res.status(500).json({
-        status: 500,
-        message: "Internal Server Error",
-      });
-    }
+    const { dokaan, user, access_token } = await createDokaanWithNewOwner(data, userEmail);
+
+    return res.status(200).json({
+      status: 200,
+      message: "Dokaan and owner created successfully",
+      data: {
+        dokaan,
+        owner: user,
+      },
+      access_token,
+    });
+  } catch (error) {
+    console.error("Create Dokaan Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Internal Server Error",
+    });
   }
+}
+
 
   static async update(req, res) {
     try {
