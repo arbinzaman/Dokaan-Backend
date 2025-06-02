@@ -1,0 +1,15 @@
+model Expense {
+  id         Int     @id @default(autoincrement())
+  title      String
+  amount     Float
+  category   String
+  date       String
+  created_at String?
+  updated_at String?
+
+  user_id  BigInt? // Fixed: match User.id
+  dokaanId BigInt? // Already matches Dokaan.id
+
+  user   User?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  dokaan Dokaan? @relation(fields: [dokaanId], references: [id], onDelete: Cascade)
+}
