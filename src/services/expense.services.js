@@ -56,11 +56,27 @@ export const updateExpense = async (id, data) => {
   return await prisma.expense.update({
     where: { id: Number(id) },
     data: {
-      ...data,
+      title: data.title,
+      notes: data.notes,
+      amount: data.amount,
+      category: data.category,
+      date: data.date,
       updated_at: new Date().toISOString(),
+
+      ...(data.user_id && {
+        user: {
+          connect: { id: BigInt(data.user_id) },
+        },
+      }),
+      ...(data.shopId && {
+        dokaan: {
+          connect: { id: BigInt(data.shopId) },
+        },
+      }),
     },
   });
 };
+
 
 
 export const deleteExpense = async (id) => {
