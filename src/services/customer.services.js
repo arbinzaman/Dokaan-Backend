@@ -226,3 +226,37 @@ export const getCustomerGrowthByShop = async (shopId) => {
   };
 };
 
+
+// Search customers by name, phone, or email (partial, case-insensitive)
+export const searchCustomers = async ({ shopId, search }) => {
+  if (!shopId) throw new Error("shopId is required");
+
+  return await prisma.customer.findMany({
+    where: {
+      AND: [
+        {
+          purchaseStats: {
+            some: {
+              dokaanId: Number(shopId),
+            },
+          },
+        },
+        {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { phone: { contains: search, mode: "insensitive" } },
+          ],
+        },
+      ],
+    },
+    include: {
+      purchaseStats: {
+        where: {
+          dokaanId: Number(shopId),
+        },
+      },
+    },
+  });
+};
+

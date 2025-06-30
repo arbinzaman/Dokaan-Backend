@@ -6,6 +6,7 @@ import {
   deleteCustomer,
   getCustomerStats,
   getCustomerGrowthByShop,
+  searchCustomers,
 } from "../services/customer.services.js";
 
 class CustomerController {
@@ -151,6 +152,27 @@ class CustomerController {
       });
     }
   }
+
+static async getSearch(req, res) {
+    try {
+      const { shopId, search } = req.query;
+      if (!shopId || !search) {
+        return res.status(400).json({
+          status: 400,
+          message: "Missing required query parameters: shopId or search",
+        });
+      }
+      const customers = await searchCustomers({ shopId, search });
+      return res.status(200).json({ status: 200, data: customers });
+    } catch (error) {
+      console.error("Search Customers Error:", error);
+      return res.status(500).json({
+        status: 500,
+        message: "Failed to search customers",
+      });
+    }
+  }
+
 }
 
 export default CustomerController;
