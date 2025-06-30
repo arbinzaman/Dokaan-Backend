@@ -9,6 +9,7 @@ import salesRoutes from "./sales.routes.js";
 import customerRoutes from "./customer.routes.js";
 import employeeRoutes from "./employee.routes.js";
 import expenseRoutes from "./expense.routes.js";
+import invoiceRoutes from "./invoice.routes.js";
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.use("/api/v1/sales", salesRoutes);
 router.use("/api/v1/customers", customerRoutes)
 router.use("/api/v1/employee", employeeRoutes);
 router.use("/api/v1/expenses", expenseRoutes);
+router.use("/api/v1/invoices", invoiceRoutes);
 
 // router.post('/send-email', async (req, res) => {
 //     const { to, subject, text, html } = req.body;
