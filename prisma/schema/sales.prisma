@@ -1,5 +1,6 @@
 model Sales {
   id             BigInt   @id @default(autoincrement())
+  invoiceId      BigInt? // link to invoice (nullable if you want)
   branch         String?
   quantity       Int
   totalPrice     Float
@@ -27,9 +28,10 @@ model Sales {
   customer   Customer? @relation(fields: [customerId], references: [id])
 
   // Existing relations
-  product Product @relation(fields: [productId], references: [id])
-  seller  User    @relation("UserSales", fields: [sellerId], references: [id])
-  shop    Dokaan  @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product Product  @relation(fields: [productId], references: [id])
+  seller  User     @relation("UserSales", fields: [sellerId], references: [id])
+  shop    Dokaan   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  invoice Invoice? @relation("InvoiceSales", fields: [invoiceId], references: [id])
 
   @@map("Sales")
 }

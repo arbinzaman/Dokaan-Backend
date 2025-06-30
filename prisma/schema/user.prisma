@@ -20,11 +20,13 @@ model User {
   twoFactorSecret    String?
   subscription       Boolean   @default(false)
   subscriptionStatus String?
+
+  // Relations
   dokaanOwned        Dokaan[]  @relation("DokaanOwnerRelation")
   productsOwned      Product[]
   salesMade          Sales[]   @relation("UserSales")
   dokaanEmployment   Dokaan?   @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])
-
-  expenses Expense[]
-  incomes  Income[]
+  expenses     Expense[]
+  incomes      Income[]
+  invoicesSold Invoice[] @relation("UserInvoices")
 }

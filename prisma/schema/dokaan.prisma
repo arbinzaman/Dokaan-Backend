@@ -10,6 +10,12 @@ model Dokaan {
   ownerId                BigInt
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
+
+
+
+
+
+  // Relations
   owner                  User               @relation("DokaanOwnerRelation", fields: [ownerId], references: [id])
   products               Product[]
   sales                  Sales[]
@@ -17,4 +23,5 @@ model Dokaan {
   customerPurchases      CustomerPurchase[]
   expenses               Expense[]
   incomes                Income[]
+  invoices               Invoice[]          @relation(fields: [], references: []) // Add this line
 }
