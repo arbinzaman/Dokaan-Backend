@@ -3,7 +3,7 @@ model Invoice {
   invoiceNumber String    @unique
   shopId        BigInt
   customerId    BigInt?
-  sellerId      BigInt
+  sellerName    String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   totalPrice    Float
@@ -20,7 +20,7 @@ model Invoice {
   // Relations
   shop     Dokaan    @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customer Customer? @relation("CustomerInvoices", fields: [customerId], references: [id])
-  seller   User      @relation("UserInvoices", fields: [sellerId], references: [id])
+  // seller   User      @relation("UserInvoices", fields: [sellerId], references: [id])
   sales    Sales[]   @relation("InvoiceSales")
 
   @@map("Invoices")

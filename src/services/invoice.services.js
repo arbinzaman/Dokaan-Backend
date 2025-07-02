@@ -2,47 +2,83 @@ import prisma from "../config/db.config.js";
 
 export const createInvoice = async (data) => {
   console.log("Seller ID:", data.sellerId);
-  return await prisma.invoice.create({
-    data: {
-      invoiceNumber: data.invoiceNumber,
-      totalPrice: data.totalPrice,
-      discount: data?.discount,
-      vatPercent: data?.vatPercent,
-      notes: data?.notes,
-      paymentStatus: data?.paymentStatus,
-      paymentMethod: data?.paymentMethod,
-      paymentRef: data?.paymentRef,
-      paymentNotes: data?.paymentNotes,
-      paymentDate: data?.paymentDate ? new Date(data.paymentDate) : null,
-      dueDate: data?.dueDate ? new Date(data.dueDate) : null,
 
-      shop: { connect: { id: BigInt(data.shopId) } },
+  // return prisma.invoice.create({
+  //   data: {
+  //     invoiceNumber: data.invoiceNumber,
+  //     totalPrice: data.totalPrice,
+  //     discount: data.discount,
+  //     vatPercent: data.vatPercent,
+  //     notes: data.notes,
+  //     paymentStatus: data.paymentStatus,
+  //     paymentMethod: data.paymentMethod,
+  //     paymentRef: data.paymentRef,
+  //     paymentNotes: data.paymentNotes,
+  //     paymentDate: data.paymentDate ? new Date(data.paymentDate) : null,
+  //     dueDate: data.dueDate ? new Date(data.dueDate) : null,
 
-      customer: data?.customerId
-        ? { connect: { id: BigInt(data.customerId) } }
-        : undefined,
+  //     shop: { connect: { id: BigInt(data.shopId) } },
+  //     customer: data.customerId
+  //       ? { connect: { id: BigInt(data.customerId) } }
+  //       : undefined,
+  //     seller: { connect: { id: BigInt(data.sellerId) } }, // THIS IS REQUIRED and ONLY place seller info goes
 
-      seller: {
-        connect: { id: BigInt(data.sellerId) }, // ✅ Proper relation connect
-      },
+  //     sales: {
+  //       create: data.sales.map((sale) => ({
+  //         product: { connect: { id: BigInt(sale.productId) } },
+  //         quantity: sale.quantity,
+  //         salesPrice: sale.salesPrice,
+  //         purchasePrice: sale.purchasePrice,
+  //         discount: sale.discount,
+  //         name: sale.name,
+  //         code: sale.code,
+  //         totalPrice: sale.salesPrice * sale.quantity - (sale.discount || 0),
+  //       })),
+  //     },
+  //   },
+  // });
 
-      sales: {
-        create: data.sales.map((sale) => ({
-          product: { connect: { id: BigInt(sale.productId) } },
-          quantity: sale.quantity,
-          salesPrice: sale.salesPrice,
-          purchasePrice: sale.purchasePrice,
-          discount: sale?.discount,
-          name: sale.name,
-          code: sale.code,
-          totalPrice:
-            sale.salesPrice * sale.quantity - (sale.discount || 0),
-        })),
-      },
+  const prismaData = {
+    invoiceNumber: data.invoiceNumber,
+    totalPrice: data.totalPrice,
+    discount: data.discount,
+    vatPercent: data.vatPercent,
+    notes: data.notes,
+    paymentStatus: data.paymentStatus,
+    paymentMethod: data.paymentMethod,
+    paymentRef: data.paymentRef,
+    paymentNotes: data.paymentNotes,
+    paymentDate: data.paymentDate ? new Date(data.paymentDate) : null,
+    dueDate: data.dueDate ? new Date(data.dueDate) : null,
+
+    shop: { connect: { id: BigInt(data.shopId) } }, // ✅
+    customer: data.customerId
+      ? { connect: { id: BigInt(data.customerId) } }
+      : undefined, // ✅
+    sellerName: data.sellerName, // ✅) ,
+    sales: {
+      create: data.sales.map((sale) => ({
+        product: { connect: { id: BigInt(sale.productId) } },
+
+        quantity: sale.quantity,
+        salesPrice: sale.salesPrice,
+        purchasePrice: sale.purchasePrice,
+        discount: sale.discount,
+        name: sale.name,
+        code: sale.code,
+        totalPrice: sale.salesPrice * sale.quantity - (sale.discount || 0),
+      })),
     },
+  };
+
+  console.log("prisma data", typeof prismaData.seller);
+  // console.log("Seller ID:", prismaData.seller.connect.id);
+  console.log("Prisma create data:", JSON.stringify(prismaData, null, 2));
+
+  return prisma.invoice.create({
+    data: prismaData,
   });
 };
-
 
 export const getInvoices = async ({ shopId, day, month, year }) => {
   const where = {
