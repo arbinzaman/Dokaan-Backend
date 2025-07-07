@@ -19,5 +19,7 @@ model Dokaan {
   customerPurchases CustomerPurchase[]
   expenses          Expense[]
   incomes           Income[]
-  invoices          Invoice[]          @relation(fields: [], references: []) // Add this line
+
+  // ✅ Let Prisma auto-infer the inverse side from Invoice.shop
+  // invoices Invoice[]
 }

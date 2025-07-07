@@ -1,7 +1,7 @@
 import prisma from "../config/db.config.js";
 
 export const createInvoice = async (data) => {
-  console.log("Seller ID:", data.sellerId);
+  // console.log("Seller ID:", data.sellerName);
 
   // return prisma.invoice.create({
   //   data: {
@@ -21,7 +21,7 @@ export const createInvoice = async (data) => {
   //     customer: data.customerId
   //       ? { connect: { id: BigInt(data.customerId) } }
   //       : undefined,
-  //     seller: { connect: { id: BigInt(data.sellerId) } }, // THIS IS REQUIRED and ONLY place seller info goes
+  // seller: { connect: { id: BigInt(data.sellerId) } }, // THIS IS REQUIRED and ONLY place seller info goes
 
   //     sales: {
   //       create: data.sales.map((sale) => ({
@@ -51,15 +51,23 @@ export const createInvoice = async (data) => {
     paymentDate: data.paymentDate ? new Date(data.paymentDate) : null,
     dueDate: data.dueDate ? new Date(data.dueDate) : null,
 
-    shop: { connect: { id: BigInt(data.shopId) } }, // ✅
+    shopId: data.shopId,
+    shopName: data.shopName,
+    //  shop: { connect: { id: BigInt(data.shopId) } },
+
     customer: data.customerId
       ? { connect: { id: BigInt(data.customerId) } }
-      : undefined, // ✅
-    sellerName: data.sellerName, // ✅) ,
+      : undefined,
+    // customerId: data.customerId ? BigInt(data.customerId) : undefined,
+
+    sellerName: data.sellerName, // keep this scalar string
+    // seller: { connect: { id: BigInt(data.sellerId) } },
+    seller: data.sellerId ? { connect: { id: BigInt(data.sellerId) } } : undefined,
+    // sellerId: BigInt(data.sellerId),
+
     sales: {
       create: data.sales.map((sale) => ({
         product: { connect: { id: BigInt(sale.productId) } },
-
         quantity: sale.quantity,
         salesPrice: sale.salesPrice,
         purchasePrice: sale.purchasePrice,
@@ -72,7 +80,8 @@ export const createInvoice = async (data) => {
   };
 
   console.log("prisma data", typeof prismaData.seller);
-  // console.log("Seller ID:", prismaData.seller.connect.id);
+  console.log("Seller ID:", prismaData.seller);
+  console.log("shop ID:", prismaData.shop);
   console.log("Prisma create data:", JSON.stringify(prismaData, null, 2));
 
   return prisma.invoice.create({
@@ -114,9 +123,9 @@ export const getInvoices = async ({ shopId, day, month, year }) => {
     where,
     include: {
       customer: true,
-      seller: true,
+      // seller: true,
       sales: true,
-      shop: true,
+      // shop: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -129,7 +138,7 @@ export const getInvoiceById = async (id) => {
     where: { id: BigInt(id) },
     include: {
       customer: true,
-      seller: true,
+      // seller: true,
       sales: true,
       shop: true,
     },
