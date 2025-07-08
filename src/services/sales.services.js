@@ -11,53 +11,71 @@ export const createSale = async (data) => {
   const { sellerId, shopId, branch, soldAt, customer, products } = data;
 
   try {
-    return await prisma.$transaction(async (tx) => {
-      // 1. Find or create customer
-      let customerRecord = null;
-      if (customer?.phone || customer?.email) {
-        customerRecord = await tx.customer.findFirst({
-          where: {
-            OR: [
-              { phone: customer.phone ?? undefined },
-              { email: customer.email ?? undefined },
-            ],
-          },
-        });
+    // 1. Fetch seller before transaction
+    const seller = await prisma.user.findUnique({
+      where: { id: BigInt(sellerId) },
+    });
+    if (!seller) throw new Error(`Seller not found: ${sellerId}`);
 
-        if (!customerRecord) {
-          customerRecord = await tx.customer.create({
-            data: {
-              name: customer.name,
-              phone: customer.phone,
-              email: customer.email,
-              address: customer.address,
-            },
-          });
-        }
-      }
-
-      // 2. Calculate totals
-      let invoiceTotalPrice = 0;
-      let invoiceTotalDiscount = 0;
-
-      for (const item of products) {
-        invoiceTotalPrice += item.totalPrice || 0;
-        invoiceTotalDiscount += item.discount || 0;
-      }
-
-      // 3. Generate invoice number
-      const invoiceNumber = generateInvoiceNumber();
-
-      // 4. Get seller info
-      const seller = await tx.user.findUnique({
-        where: { id: BigInt(sellerId) },
+    // 2. Find or create customer before transaction
+    let customerRecord = null;
+    if (customer?.phone || customer?.email) {
+      customerRecord = await prisma.customer.findFirst({
+        where: {
+          OR: [
+            { phone: customer.phone ?? undefined },
+            { email: customer.email ?? undefined },
+          ],
+        },
       });
 
-      if (!seller) {
-        throw new Error(`Seller (User) not found with id: ${sellerId}`);
+      if (!customerRecord) {
+        customerRecord = await prisma.customer.create({
+          data: {
+            name: customer.name,
+            phone: customer.phone,
+            email: customer.email,
+            address: customer.address,
+          },
+        });
       }
+    }
 
-      // 5. Create invoice (✅ fixed shopId)
+    // 3. Fetch all products in one go
+    const productCodes = products.map((p) => p.code);
+    const dbProducts = await prisma.product.findMany({
+      where: { code: { in: productCodes } },
+    });
+
+    // 4. Pre-compute totals
+    let invoiceTotalPrice = 0;
+    let invoiceTotalDiscount = 0;
+    const saleItems = [];
+
+    for (const item of products) {
+      const dbProduct = dbProducts.find((p) => p.code === item.code);
+      if (!dbProduct) throw new Error(`Product not found: ${item.code}`);
+      if ((dbProduct.initialStock || 0) < item.quantity)
+        throw new Error(`Not enough stock for: ${dbProduct.name}`);
+
+      const itemTotal =
+        item.quantity * dbProduct.salesPrice -
+        (item.discount / 100) * item.quantity * dbProduct.salesPrice;
+
+      invoiceTotalPrice += itemTotal;
+      invoiceTotalDiscount += item.discount || 0;
+
+      saleItems.push({
+        ...item,
+        totalPrice: itemTotal,
+        dbProduct,
+      });
+    }
+
+    // 5. Create everything inside transaction
+    return await prisma.$transaction(async (tx) => {
+      const invoiceNumber = generateInvoiceNumber();
+
       const invoice = await tx.invoice.create({
         data: {
           invoiceNumber,
@@ -67,10 +85,7 @@ export const createSale = async (data) => {
           notes: "",
           paymentStatus: "paid",
           paymentMethod: "Cash",
-          paymentRef: "",
-          paymentNotes: "",
           paymentDate: null,
-          dueDate: null,
           sellerName: seller.name || "",
           seller: { connect: { id: BigInt(sellerId) } },
           shop: { connect: { id: BigInt(shopId) } },
@@ -80,68 +95,66 @@ export const createSale = async (data) => {
         },
       });
 
-      // 6. For each product: check, update stock & create sale
-      for (const item of products) {
-        const product = await tx.product.findUnique({
-          where: { code: item.code },
-        });
+      // 6. Update all stocks in parallel
+      await Promise.all(
+        saleItems.map(({ dbProduct, quantity }) =>
+          tx.product.update({
+            where: { id: dbProduct.id },
+            data: {
+              initialStock: dbProduct.initialStock - quantity,
+            },
+          })
+        )
+      );
 
-        if (!product) {
-          throw new Error(`Product not found: ${item.code}`);
-        }
+      // 7. Create all sales in parallel
+      await Promise.all(
+        saleItems.map(({ dbProduct, quantity, totalPrice, discount }) =>
+          tx.sales.create({
+            data: {
+              code: dbProduct.code,
+              branch,
+              quantity,
+              totalPrice,
+              soldAt: new Date(soldAt || new Date()),
 
-        if ((product.initialStock || 0) < item.quantity) {
-          throw new Error(`Not enough stock for product: ${product.name}`);
-        }
+              name: dbProduct.name,
+              purchasePrice: dbProduct.purchasePrice,
+              salesPrice: dbProduct.salesPrice,
+              discount: discount,
+              includeVAT: dbProduct.includeVAT,
+              batchNo: dbProduct.batchNo,
+              serialNoOrIMEI: dbProduct.serialNoOrIMEI,
+              description: dbProduct.description,
+              itemUnit: dbProduct.itemUnit,
+              itemCategory: dbProduct.itemCategory,
+              size: dbProduct.size,
+              wholesalePrice: dbProduct.wholesalePrice,
+              mrp: dbProduct.mrp,
 
-        await tx.product.update({
-          where: { code: product.code },
-          data: {
-            initialStock: (product.initialStock || 0) - item.quantity,
-          },
-        });
-
-        await tx.sales.create({
-          data: {
-            code: item.code,
-            branch,
-            quantity: item.quantity,
-            totalPrice: item.totalPrice,
-            soldAt: new Date(soldAt || new Date()),
-
-            product: { connect: { id: product.id } },
-            shop: { connect: { id: BigInt(shopId) } },
-            seller: { connect: { id: BigInt(sellerId) } },
-            invoice: { connect: { id: invoice.id } },
-
-            ...(customerRecord && {
-              customer: { connect: { id: customerRecord.id } },
-            }),
-
-            name: product.name,
-            purchasePrice: product.purchasePrice,
-            salesPrice: product.salesPrice,
-            discount: product.discount,
-            includeVAT: product.includeVAT,
-            batchNo: product.batchNo,
-            serialNoOrIMEI: product.serialNoOrIMEI,
-            description: product.description,
-            itemUnit: product.itemUnit,
-            itemCategory: product.itemCategory,
-            size: product.size,
-            wholesalePrice: product.wholesalePrice,
-            mrp: product.mrp,
-          },
-        });
-      }
+              product: { connect: { id: dbProduct.id } },
+              seller: { connect: { id: BigInt(sellerId) } },
+              shop: { connect: { id: BigInt(shopId) } },
+              invoice: { connect: { id: invoice.id } },
+              ...(customerRecord && {
+                customer: { connect: { id: customerRecord.id } },
+              }),
+            },
+          })
+        )
+      );
 
       return invoice;
+    }, {
+      timeout: 8000, // optional: bump it a little if needed
     });
+
   } catch (error) {
-    console.error("Error creating invoice with sales:", error);
+    console.error("createSale error:", error);
     throw error;
   }
 };
+
 
 // Get All Sales
 // Filter by year, month, date
