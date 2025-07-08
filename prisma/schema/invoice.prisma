@@ -14,8 +14,11 @@ model Invoice {
   sellerName    String
   shopName      String?
 
-  shopId BigInt?
-  shop   Dokaan? @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  sellerId BigInt?
+  seller   User?   @relation("UserInvoices", fields: [sellerId], references: [id])
+
+  shopId     BigInt?
+  shop       Dokaan?   @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customerId BigInt?
   customer   Customer? @relation("CustomerInvoices", fields: [customerId], references: [id])
   sales      Sales[]   @relation("InvoiceSales")

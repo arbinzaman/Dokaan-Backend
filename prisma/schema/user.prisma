@@ -28,5 +28,5 @@ model User {
   dokaanEmployment Dokaan?   @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])
   expenses         Expense[]
   incomes          Income[]
-  // invoicesSold     Invoice[] @relation("UserInvoices")
+  invoicesSold     Invoice[] @relation("UserInvoices")
 }

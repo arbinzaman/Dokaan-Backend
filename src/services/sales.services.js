@@ -72,6 +72,7 @@ export const createSale = async (data) => {
           paymentDate: null,
           dueDate: null,
           sellerName: seller.name || "",
+          seller: { connect: { id: BigInt(sellerId) } },
           shop: { connect: { id: BigInt(shopId) } },
           ...(customerRecord && {
             customer: { connect: { id: customerRecord.id } },
