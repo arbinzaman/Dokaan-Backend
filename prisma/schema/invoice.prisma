@@ -12,16 +12,13 @@ model Invoice {
   paymentRef    String?
   paymentNotes  String?
   sellerName    String
-  shopName      String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  shopName      String?
 
-  // ✅ Foreign Key
+  shopId BigInt?
+  shop   Dokaan? @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customerId BigInt?
-
-  // ✅ Relations
-  customer Customer? @relation("CustomerInvoices", fields: [customerId], references: [id])
-  sales    Sales[]   @relation("InvoiceSales")
+  customer   Customer? @relation("CustomerInvoices", fields: [customerId], references: [id])
+  sales      Sales[]   @relation("InvoiceSales")
 
   @@map("Invoices")
 }

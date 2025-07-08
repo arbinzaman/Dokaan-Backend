@@ -21,5 +21,6 @@ model Dokaan {
   incomes           Income[]
 
   // ✅ Let Prisma auto-infer the inverse side from Invoice.shop
-  // invoices Invoice[]
+
+  invoices Invoice[] // inverse relation
 }

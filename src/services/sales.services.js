@@ -1,137 +1,162 @@
 import prisma from "../config/db.config.js";
 
+export const generateInvoiceNumber = () => {
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 19).replace(/[-T:]/g, "");
+  const randomPart = Math.floor(1000 + Math.random() * 9000);
+  return `INV-${datePart}-${randomPart}`;
+};
+
 export const createSale = async (data) => {
-  const { products, customer, ...saleMeta } = data;
+  const { sellerId, shopId, branch, soldAt, customer, products } = data;
 
-  // --- Handle customer logic ---
-  let customerRecord = null;
-  if (customer?.phone || customer?.email) {
-    customerRecord = await prisma.customer.findFirst({
-      where: {
-        OR: [
-          { phone: customer.phone ?? undefined },
-          { email: customer.email ?? undefined },
-        ],
-      },
-    });
-
-    if (!customerRecord) {
-      customerRecord = await prisma.customer.create({
-        data: {
-          name: customer.name,
-          phone: customer.phone,
-          email: customer.email,
-          address: customer.address,
-        },
-      });
-    }
-  }
-
-  const createdSales = [];
-
-  for (const item of products) {
-    const product = await prisma.product.findUnique({
-      where: { code: item.code },
-    });
-
-    if (!product) {
-      throw new Error(`Product not found: ${item.code}`);
-    }
-
-    if ((product.initialStock || 0) < item.quantity) {
-      throw new Error(`Not enough stock for product: ${product.name}`);
-    }
-
-    // Update product stock
-    await prisma.product.update({
-      where: { code: product.code },
-      data: {
-        initialStock: (product.initialStock || 0) - item.quantity,
-      },
-    });
-
-    // Create sale
-    const sale = await prisma.sales.create({
-      data: {
-        code: item.code,
-        branch: saleMeta.branch,
-        quantity: item.quantity,
-        totalPrice: item.totalPrice,
-        soldAt: new Date(saleMeta.soldAt || new Date()),
-
-        product: { connect: { id: product.id } },
-        seller: { connect: { id: saleMeta.sellerId } },
-        shop: { connect: { id: saleMeta.shopId } },
-
-        ...(customerRecord && { customer: { connect: { id: customerRecord.id } } }),
-
-        name: product.name,
-        purchasePrice: product.purchasePrice,
-        salesPrice: product.salesPrice,
-        discount: product.discount,
-        includeVAT: product.includeVAT,
-        batchNo: product.batchNo,
-        serialNoOrIMEI: product.serialNoOrIMEI,
-        description: product.description,
-        itemUnit: product.itemUnit,
-        itemCategory: product.itemCategory,
-        size: product.size,
-        wholesalePrice: product.wholesalePrice,
-        mrp: product.mrp,
-      },
-    });
-
-    // Update CustomerPurchase entry if customer exists
-    if (customerRecord) {
-      const dokaanId = saleMeta.shopId;
-
-      const existingPurchase = await prisma.customerPurchase.findUnique({
-        where: {
-          customerId_dokaanId_productId: {
-            customerId: customerRecord.id,
-            dokaanId: dokaanId,
-            productId: product.id,
-          },
-        },
-      });
-
-      if (existingPurchase) {
-        await prisma.customerPurchase.update({
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Find or create customer
+      let customerRecord = null;
+      if (customer?.phone || customer?.email) {
+        customerRecord = await tx.customer.findFirst({
           where: {
-            customerId_dokaanId_productId: {
-              customerId: customerRecord.id,
-              dokaanId: dokaanId,
-              productId: product.id,
-            },
-          },
-          data: {
-            purchaseCount: existingPurchase.purchaseCount + item.quantity,
+            OR: [
+              { phone: customer.phone ?? undefined },
+              { email: customer.email ?? undefined },
+            ],
           },
         });
-      } else {
-        await prisma.customerPurchase.create({
+
+        if (!customerRecord) {
+          customerRecord = await tx.customer.create({
+            data: {
+              name: customer.name,
+              phone: customer.phone,
+              email: customer.email,
+              address: customer.address,
+            },
+          });
+        }
+      }
+
+      // 2. Calculate totals
+      let invoiceTotalPrice = 0;
+      let invoiceTotalDiscount = 0;
+
+      for (const item of products) {
+        invoiceTotalPrice += item.totalPrice || 0;
+        invoiceTotalDiscount += item.discount || 0;
+      }
+
+      // 3. Generate invoice number
+      const invoiceNumber = generateInvoiceNumber();
+
+      // 4. Get seller info
+      const seller = await tx.user.findUnique({
+        where: { id: BigInt(sellerId) },
+      });
+
+      if (!seller) {
+        throw new Error(`Seller (User) not found with id: ${sellerId}`);
+      }
+
+      // 5. Create invoice (✅ fixed shopId)
+      const invoice = await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          totalPrice: invoiceTotalPrice,
+          discount: invoiceTotalDiscount,
+          vatPercent: 0,
+          notes: "",
+          paymentStatus: "paid",
+          paymentMethod: "Cash",
+          paymentRef: "",
+          paymentNotes: "",
+          paymentDate: null,
+          dueDate: null,
+          sellerName: seller.name || "",
+          shop: { connect: { id: BigInt(shopId) } },
+          ...(customerRecord && {
+            customer: { connect: { id: customerRecord.id } },
+          }),
+        },
+      });
+
+      // 6. For each product: check, update stock & create sale
+      for (const item of products) {
+        const product = await tx.product.findUnique({
+          where: { code: item.code },
+        });
+
+        if (!product) {
+          throw new Error(`Product not found: ${item.code}`);
+        }
+
+        if ((product.initialStock || 0) < item.quantity) {
+          throw new Error(`Not enough stock for product: ${product.name}`);
+        }
+
+        await tx.product.update({
+          where: { code: product.code },
           data: {
-            customerId: customerRecord.id,
-            dokaanId: dokaanId,
-            productId: product.id,
-            purchaseCount: item.quantity,
+            initialStock: (product.initialStock || 0) - item.quantity,
+          },
+        });
+
+        await tx.sales.create({
+          data: {
+            code: item.code,
+            branch,
+            quantity: item.quantity,
+            totalPrice: item.totalPrice,
+            soldAt: new Date(soldAt || new Date()),
+
+            product: { connect: { id: product.id } },
+            shop: { connect: { id: BigInt(shopId) } },
+            seller: { connect: { id: BigInt(sellerId) } },
+            invoice: { connect: { id: invoice.id } },
+
+            ...(customerRecord && {
+              customer: { connect: { id: customerRecord.id } },
+            }),
+
+            name: product.name,
+            purchasePrice: product.purchasePrice,
+            salesPrice: product.salesPrice,
+            discount: product.discount,
+            includeVAT: product.includeVAT,
+            batchNo: product.batchNo,
+            serialNoOrIMEI: product.serialNoOrIMEI,
+            description: product.description,
+            itemUnit: product.itemUnit,
+            itemCategory: product.itemCategory,
+            size: product.size,
+            wholesalePrice: product.wholesalePrice,
+            mrp: product.mrp,
           },
         });
       }
-    }
 
-    createdSales.push(sale);
+      return invoice;
+    });
+  } catch (error) {
+    console.error("Error creating invoice with sales:", error);
+    throw error;
   }
-
-  return createdSales;
 };
-
 
 // Get All Sales
 // Filter by year, month, date
 const monthMap = {
-  jan: 0, feb: 1, march: 2, april: 3, may: 4, june: 5,
-  july: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+  jan: 0,
+  feb: 1,
+  march: 2,
+  april: 3,
+  may: 4,
+  june: 5,
+  july: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11,
 };
 // Get all sales for a specific shop, with optional filters for year, month, and date
 // Returns an object with filters, filtered sales, and grouped sales
@@ -151,53 +176,44 @@ export const getAllSales = async (shopId, year, month, date, day) => {
     const saleDay = soldAt.getDate(); // 1-31
     const saleMonth = soldAt.getMonth(); // 0-11
     const saleYear = soldAt.getFullYear();
-  
+
     // Match full exact date
     if (date) {
       const filterDate = new Date(date);
       return soldAt.toDateString() === filterDate.toDateString();
     }
-  
+
     // ✅ Match by day + month
     if (day && month && !year) {
       return (
-        saleDay === Number(day) &&
-        saleMonth === monthMap[month.toLowerCase()]
+        saleDay === Number(day) && saleMonth === monthMap[month.toLowerCase()]
       );
     }
-  
+
     // ✅ Match by day only (across all months/years)
     if (day && !month && !year) {
       return saleDay === Number(day);
     }
-  
+
     // Match by month only
     if (month && !year) {
       return saleMonth === monthMap[month.toLowerCase()];
     }
-  
+
     // Match month + year
     if (month && year) {
       return (
-        saleMonth === monthMap[month.toLowerCase()] &&
-        saleYear === Number(year)
+        saleMonth === monthMap[month.toLowerCase()] && saleYear === Number(year)
       );
     }
-  
+
     // Match year only
     if (year) {
       return saleYear === Number(year);
     }
-  
+
     return true; // fallback: return all if no filters
   });
-  
-  
-  
-  
-  
-  
-  
 
   const grouped = {
     dayWise: {},
@@ -208,7 +224,9 @@ export const getAllSales = async (shopId, year, month, date, day) => {
   for (const sale of filtered) {
     const soldAt = new Date(sale.soldAt);
     const dayKey = soldAt.toISOString().split("T")[0];
-    const monthKey = `${soldAt.getFullYear()}-${String(soldAt.getMonth() + 1).padStart(2, "0")}`;
+    const monthKey = `${soldAt.getFullYear()}-${String(
+      soldAt.getMonth() + 1
+    ).padStart(2, "0")}`;
     const yearKey = `${soldAt.getFullYear()}`;
 
     const groupSale = (group, key) => {
@@ -378,9 +396,18 @@ export const getMonthlySalesStats = async (shopId) => {
   });
 
   const monthMap = {
-    0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr",
-    4: "May", 5: "Jun", 6: "Jul", 7: "Aug",
-    8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec",
+    0: "Jan",
+    1: "Feb",
+    2: "Mar",
+    3: "Apr",
+    4: "May",
+    5: "Jun",
+    6: "Jul",
+    7: "Aug",
+    8: "Sep",
+    9: "Oct",
+    10: "Nov",
+    11: "Dec",
   };
 
   const salesByMonth = {};
@@ -400,7 +427,6 @@ export const getMonthlySalesStats = async (shopId) => {
 
   return result;
 };
-
 
 // Get total sales for a specific shop (sum of all sales)
 export const getTotalSales = async (shopId) => {
@@ -423,8 +449,6 @@ export const getTotalSales = async (shopId) => {
   };
 };
 
-
-
 export const getCategoryWiseSales = async (shopId) => {
   const result = await prisma.sales.groupBy({
     by: ["itemCategory"],
@@ -441,7 +465,6 @@ export const getCategoryWiseSales = async (shopId) => {
     totalSalesAmount: item._sum.totalPrice || 0,
   }));
 };
-
 
 export const getTotalRevenueAndGrowth = async (shopId) => {
   const now = new Date();
@@ -493,12 +516,14 @@ export const getTotalRevenueAndGrowth = async (shopId) => {
 
   let growth = 0;
   if (previousTotalRevenue > 0) {
-    growth = ((currentTotalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100;
+    growth =
+      ((currentTotalRevenue - previousTotalRevenue) / previousTotalRevenue) *
+      100;
   }
 
   return {
     totalRevenue: currentTotalRevenue,
-    salesGrowth: growth.toFixed(1) + '%',
+    salesGrowth: growth.toFixed(1) + "%",
   };
 };
 
@@ -550,10 +575,6 @@ export const getTotalDailySalesCount = async (shopId) => {
     dailySalesData: daysOfWeek,
   };
 };
-
-
-
-
 
 // // Get Top Selling Products by Product Code
 // export const getTopSellingProducts = async (limit = 5, shopId) => {
