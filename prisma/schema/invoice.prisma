@@ -14,6 +14,9 @@ model Invoice {
   sellerName    String
   shopName      String?
 
+  createdAt DateTime @default(now()) // ✅ Add this
+  updatedAt DateTime @default(now())
+
   sellerId BigInt?
   seller   User?   @relation("UserInvoices", fields: [sellerId], references: [id])
 
