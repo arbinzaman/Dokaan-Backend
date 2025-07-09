@@ -11,10 +11,13 @@ model Invoice {
   paymentDate   DateTime?
   paymentRef    String?
   paymentNotes  String?
+
   sellerName    String
   shopName      String?
+  shopAddress   String?  // ✅ Add this if needed
+  shopPhone     String?  // ✅ Add this if needed
 
-  createdAt DateTime @default(now()) // ✅ Add this
+  createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
   sellerId BigInt?

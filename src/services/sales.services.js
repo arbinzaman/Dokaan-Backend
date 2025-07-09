@@ -11,13 +11,19 @@ export const createSale = async (data) => {
   const { sellerId, shopId, branch, soldAt, customer, products } = data;
 
   try {
-    // 1. Fetch seller before transaction
+    // 1. Fetch seller
     const seller = await prisma.user.findUnique({
       where: { id: BigInt(sellerId) },
     });
     if (!seller) throw new Error(`Seller not found: ${sellerId}`);
 
-    // 2. Find or create customer before transaction
+    // 2. Fetch shop
+    const shop = await prisma.dokaan.findUnique({
+      where: { id: BigInt(shopId) },
+    });
+    if (!shop) throw new Error(`Shop not found: ${shopId}`);
+
+    // 3. Find or create customer
     let customerRecord = null;
     if (customer?.phone || customer?.email) {
       customerRecord = await prisma.customer.findFirst({
@@ -41,13 +47,13 @@ export const createSale = async (data) => {
       }
     }
 
-    // 3. Fetch all products in one go
+    // 4. Fetch all products
     const productCodes = products.map((p) => p.code);
     const dbProducts = await prisma.product.findMany({
       where: { code: { in: productCodes } },
     });
 
-    // 4. Pre-compute totals
+    // 5. Calculate totals and validate stock
     let invoiceTotalPrice = 0;
     let invoiceTotalDiscount = 0;
     const saleItems = [];
@@ -72,88 +78,94 @@ export const createSale = async (data) => {
       });
     }
 
-    // 5. Create everything inside transaction
-    return await prisma.$transaction(async (tx) => {
-      const invoiceNumber = generateInvoiceNumber();
+    // 6. Transaction to create invoice, update stock, and create sales
+    return await prisma.$transaction(
+      async (tx) => {
+        const invoiceNumber = generateInvoiceNumber();
 
-      const invoice = await tx.invoice.create({
-        data: {
-          invoiceNumber,
-          totalPrice: invoiceTotalPrice,
-          discount: invoiceTotalDiscount,
-          vatPercent: 0,
-          notes: "",
-          paymentStatus: "paid",
-          paymentMethod: "Cash",
-          paymentDate: null,
-          sellerName: seller.name || "",
-          seller: { connect: { id: BigInt(sellerId) } },
-          shop: { connect: { id: BigInt(shopId) } },
-          ...(customerRecord && {
-            customer: { connect: { id: customerRecord.id } },
-          }),
-        },
-      });
+        const invoice = await tx.invoice.create({
+          data: {
+            invoiceNumber,
+            totalPrice: invoiceTotalPrice,
+            discount: invoiceTotalDiscount,
+            vatPercent: 0,
+            notes: "",
+            paymentStatus: "paid",
+            paymentMethod: "Cash",
+            paymentDate: null,
+            sellerName: seller.name || "",
+            shopName: shop.dokaan_name,
+            shopAddress: shop.dokaan_location,
+            shopPhone: shop.dokaan_phone,
+            seller: { connect: { id: BigInt(sellerId) } },
+            shop: { connect: { id: BigInt(shopId) } },
+            ...(customerRecord && {
+              customer: { connect: { id: customerRecord.id } },
+            }),
+          },
+        });
 
-      // 6. Update all stocks in parallel
-      await Promise.all(
-        saleItems.map(({ dbProduct, quantity }) =>
-          tx.product.update({
-            where: { id: dbProduct.id },
-            data: {
-              initialStock: dbProduct.initialStock - quantity,
-            },
-          })
-        )
-      );
+        // 7. Update stock
+        await Promise.all(
+          saleItems.map(({ dbProduct, quantity }) =>
+            tx.product.update({
+              where: { id: dbProduct.id },
+              data: {
+                initialStock: dbProduct.initialStock - quantity,
+              },
+            })
+          )
+        );
 
-      // 7. Create all sales in parallel
-      await Promise.all(
-        saleItems.map(({ dbProduct, quantity, totalPrice, discount }) =>
-          tx.sales.create({
-            data: {
-              code: dbProduct.code,
-              branch,
-              quantity,
-              totalPrice,
-              soldAt: new Date(soldAt || new Date()),
+        // 8. Create sales
+        await Promise.all(
+          saleItems.map(({ dbProduct, quantity, totalPrice, discount }) =>
+            tx.sales.create({
+              data: {
+                code: dbProduct.code,
+                branch,
+                quantity,
+                totalPrice,
+                soldAt: new Date(soldAt || new Date()),
 
-              name: dbProduct.name,
-              purchasePrice: dbProduct.purchasePrice,
-              salesPrice: dbProduct.salesPrice,
-              discount: discount,
-              includeVAT: dbProduct.includeVAT,
-              batchNo: dbProduct.batchNo,
-              serialNoOrIMEI: dbProduct.serialNoOrIMEI,
-              description: dbProduct.description,
-              itemUnit: dbProduct.itemUnit,
-              itemCategory: dbProduct.itemCategory,
-              size: dbProduct.size,
-              wholesalePrice: dbProduct.wholesalePrice,
-              mrp: dbProduct.mrp,
+                name: dbProduct.name,
+                purchasePrice: dbProduct.purchasePrice,
+                salesPrice: dbProduct.salesPrice,
+                discount: discount,
+                includeVAT: dbProduct.includeVAT,
+                batchNo: dbProduct.batchNo,
+                serialNoOrIMEI: dbProduct.serialNoOrIMEI,
+                description: dbProduct.description,
+                itemUnit: dbProduct.itemUnit,
+                itemCategory: dbProduct.itemCategory,
+                size: dbProduct.size,
+                wholesalePrice: dbProduct.wholesalePrice,
+                mrp: dbProduct.mrp,
 
-              product: { connect: { id: dbProduct.id } },
-              seller: { connect: { id: BigInt(sellerId) } },
-              shop: { connect: { id: BigInt(shopId) } },
-              invoice: { connect: { id: invoice.id } },
-              ...(customerRecord && {
-                customer: { connect: { id: customerRecord.id } },
-              }),
-            },
-          })
-        )
-      );
+                product: { connect: { id: dbProduct.id } },
+                seller: { connect: { id: BigInt(sellerId) } },
+                shop: { connect: { id: BigInt(shopId) } },
+                invoice: { connect: { id: invoice.id } },
+                ...(customerRecord && {
+                  customer: { connect: { id: customerRecord.id } },
+                }),
+              },
+            })
+          )
+        );
 
-      return invoice;
-    }, {
-      timeout: 8000, // optional: bump it a little if needed
-    });
-
+        return invoice;
+      },
+      {
+        timeout: 8000,
+      }
+    );
   } catch (error) {
     console.error("createSale error:", error);
     throw error;
   }
 };
+
 
 
 // Get All Sales
