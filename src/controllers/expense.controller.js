@@ -4,6 +4,8 @@ import {
   getSingleExpense,
   updateExpense,
   deleteExpense,
+  getFinancialSummary,
+  getDetailedIncomeStatement,
 } from "../services/expense.services.js";
 
 class ExpenseController {
@@ -43,33 +45,86 @@ class ExpenseController {
     }
   }
 
-  static async getAllByShop(req, res) {
-  try {
-    const { shopId } = req.query; // 🔁 Changed from req.params to req.query
+  static async getIncomeStatement(req, res) {
+    try {
+      const { shopId, type, date, month, year, week } = req.query;
 
-    if (!shopId || isNaN(shopId)) {
-      return res.status(400).json({
-        status: 400,
-        message: "Valid numeric Shop ID is required",
+      if (!shopId || !type) {
+        return res
+          .status(400)
+          .json({ message: "shopId and type are required" });
+      }
+
+      const result = await getDetailedIncomeStatement({
+        shopId,
+        type,
+        date,
+        month,
+        year,
+        week,
+      });
+
+      return res.status(200).json({
+        status: 200,
+        message: "Income statement fetched successfully",
+        data: result,
+      });
+    } catch (err) {
+      console.error("Income Statement Error:", err);
+      return res.status(500).json({ message: "Internal Server Error" });
+    }
+  }
+
+  static async getAllByShop(req, res) {
+    try {
+      const { shopId } = req.query; // 🔁 Changed from req.params to req.query
+
+      if (!shopId || isNaN(shopId)) {
+        return res.status(400).json({
+          status: 400,
+          message: "Valid numeric Shop ID is required",
+        });
+      }
+
+      const expenses = await getAllExpensesByShopId(shopId);
+
+      return res.status(200).json({
+        status: 200,
+        message: "Expenses fetched successfully",
+        data: expenses,
+      });
+    } catch (error) {
+      console.error("Get Expenses by Shop ID Error:", error);
+      return res.status(500).json({
+        status: 500,
+        message: error.message || "Internal Server Error",
       });
     }
-
-    const expenses = await getAllExpensesByShopId(shopId);
-
-    return res.status(200).json({
-      status: 200,
-      message: "Expenses fetched successfully",
-      data: expenses,
-    });
-  } catch (error) {
-    console.error("Get Expenses by Shop ID Error:", error);
-    return res.status(500).json({
-      status: 500,
-      message: error.message || "Internal Server Error",
-    });
   }
-}
 
+  static async getFinancialReport(req, res) {
+    try {
+      const { shopId, type } = req.query;
+
+      if (!shopId) {
+        return res.status(400).json({ message: "shopId is required" });
+      }
+
+      const summary = await getFinancialSummary(shopId, type);
+
+      return res.status(200).json({
+        status: 200,
+        message: "Financial summary fetched successfully",
+        data: summary,
+      });
+    } catch (error) {
+      console.error("Financial report error:", error);
+      return res.status(500).json({
+        status: 500,
+        message: "Internal Server Error",
+      });
+    }
+  }
 
   static async getById(req, res) {
     try {
