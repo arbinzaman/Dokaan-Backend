@@ -1,5 +1,5 @@
 model Dokaan {
-  id                     BigInt    @id @default(autoincrement())
+  id                     BigInt   @id @default(autoincrement())
   dokaan_name            String
   dokaan_location        String
   dokaan_imageUrl        String?
@@ -8,12 +8,19 @@ model Dokaan {
   dokaan_phone           String?
   dokaan_type            String?
   ownerId                BigInt
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-  owner                  User      @relation("DokaanOwnerRelation", fields: [ownerId], references: [id])
-  products               Product[]
-  sales                  Sales[]
-  employees              User[]    @relation("DokaanEmployeeRelation")
-  customerPurchases      CustomerPurchase[]
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
+  // Relations
+  owner             User               @relation("DokaanOwnerRelation", fields: [ownerId], references: [id])
+  products          Product[]
+  sales             Sales[]
+  employees         User[]             @relation("DokaanEmployeeRelation")
+  customerPurchases CustomerPurchase[]
+  expenses          Expense[]
+  incomes           Income[]
+
+  // ✅ Let Prisma auto-infer the inverse side from Invoice.shop
+
+  invoices Invoice[] // inverse relation
 }

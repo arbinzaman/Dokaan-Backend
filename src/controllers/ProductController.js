@@ -33,27 +33,35 @@ class ProductController {
     }
   }
 
-  static async update(req, res) {
-    try {
-      const { id } = req.params;
-      const data = req.body;
-      const files = req.files;
+   static async update(req, res) {
+  try {
+    const { code } = req.params;
+    // console.log(req.body);
 
-      const product = await updateProduct(id, data, files);
-
-      return res.status(200).json({
-        status: 200,
-        message: "Product updated successfully",
-        data: product,
-      });
-    } catch (error) {
-      console.error("Update Product Error:", error);
-      return res.status(500).json({
-        status: 500,
-        message: "Internal Server Error",
-      });
+    if (!code) {
+      return res.status(400).json({ status: 400, message: "Product code is required" });
     }
+
+    const updateData = req.body;
+
+    const updatedProduct = await prisma.product.update({
+      where: { code },
+      data: updateData,
+    });
+
+    return res.status(200).json({ status: 200, message: "Product updated", data: updatedProduct });
+  } catch (error) {
+    if (error.code === "P2025") {
+      // Prisma error: Record not found
+      return res.status(404).json({ status: 404, message: "Product not found" });
+    }
+    console.error(error);
+    return res.status(500).json({ status: 500, message: "Server error", error: error.message });
   }
+}
+
+
+
 
   static async delete(req, res) {
     try {
@@ -75,21 +83,23 @@ class ProductController {
   }
 
   static async getAll(req, res) {
-    try {
-      const products = await getAllProducts();
+  try {
+    const shopId = req.query.shopId ? parseInt(req.query.shopId, 10) : undefined;
+    const products = await getAllProducts(shopId);
 
-      return res.status(200).json({
-        status: 200,
-        data: products,
-      });
-    } catch (error) {
-      console.error("Get All Products Error:", error);
-      return res.status(500).json({
-        status: 500,
-        message: "Internal Server Error",
-      });
-    }
+    return res.status(200).json({
+      status: 200,
+      data: products,
+    });
+  } catch (error) {
+    console.error("Get All Products Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: "Internal Server Error",
+    });
   }
+}
+
 
   static async getProductsByEmail(req, res) {
     try {

@@ -1,20 +1,32 @@
 model User {
-  id               BigInt    @id @default(autoincrement())
-  email            String    @unique
-  name             String?
-  password         String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  role             String?
-  profileImageUrl  String?
-  dokaanId         BigInt?
-  shopRole         String?
-  twoFactorEnabled Boolean   @default(false)
-  twoFactorSecret  String?
-  subscription        Boolean  @default(false)
-  subscriptionStatus  String?  // e.g., "active", "inactive", etc.
+  id                 BigInt    @id @default(autoincrement())
+  email              String    @unique
+  name               String?
+  password           String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  role               String?
+  profileImageUrl    String?
+  dokaanId           BigInt?
+  shopRole           String?
+  salary             Float?
+  workStartTime      DateTime?
+  workEndTime        DateTime?
+  workDays           String?
+  workHours          String?
+  workLocation       String?
+  workStatus         String?
+  twoFactorEnabled   Boolean   @default(false)
+  twoFactorSecret    String?
+  subscription       Boolean   @default(false)
+  subscriptionStatus String?
+
+  // ✅ Relations
   dokaanOwned      Dokaan[]  @relation("DokaanOwnerRelation")
   productsOwned    Product[]
   salesMade        Sales[]   @relation("UserSales")
   dokaanEmployment Dokaan?   @relation("DokaanEmployeeRelation", fields: [dokaanId], references: [id])
+  expenses         Expense[]
+  incomes          Income[]
+  invoicesSold     Invoice[] @relation("UserInvoices")
 }

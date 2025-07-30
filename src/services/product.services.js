@@ -13,6 +13,7 @@ export const createProduct = async (data, files) => {
       description,
       shopId,
       ownerId,
+      itemCategory, // <-- Accept itemCategory from request
     } = data;
 
     let imageUrl = null;
@@ -51,6 +52,7 @@ export const createProduct = async (data, files) => {
         imageUrl,
         shopId: Number(shopId),
         ownerId: Number(ownerId),
+        itemCategory: itemCategory || null, // <-- Save itemCategory if provided
       },
     });
   } catch (error) {
@@ -59,7 +61,8 @@ export const createProduct = async (data, files) => {
   }
 };
 
-export const updateProduct = async (id, data, files) => {
+
+export const updateProduct = async (code, data, files) => {
   try {
     let imageUrl = null;
 
@@ -76,8 +79,16 @@ export const updateProduct = async (id, data, files) => {
       imageUrl = uploadResult.secure_url;
     }
 
+    const existing = await prisma.product.findUnique({
+      where: { code },
+    });
+
+    if (!existing) {
+      throw new Error(`Product with code ${code} not found`);
+    }
+
     return await prisma.product.update({
-      where: { id: Number(id) },
+      where: { code },
       data: {
         ...data,
         imageUrl: imageUrl || undefined,
@@ -88,6 +99,7 @@ export const updateProduct = async (id, data, files) => {
     throw error;
   }
 };
+
 
 export const deleteProduct = async (id) => {
   try {
@@ -100,9 +112,10 @@ export const deleteProduct = async (id) => {
   }
 };
 
-export const getAllProducts = async () => {
+export const getAllProducts = async (shopId) => {
   try {
     const products = await prisma.product.findMany({
+      where: shopId ? { shopId } : undefined,
       include: {
         shop: true,
         owner: true,
@@ -119,6 +132,7 @@ export const getAllProducts = async () => {
     throw error;
   }
 };
+
 
 export const getProductsByEmail = async (email) => {
   try {

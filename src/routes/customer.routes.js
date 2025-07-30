@@ -5,10 +5,12 @@ const router = Router();
 
 router.post("/", CustomerController.create);
 router.get("/", CustomerController.getAll);
+router.get("/search", CustomerController.getSearch);
 router.get("/growth", CustomerController.getShopGrowthStats);
 router.get("/stats", CustomerController.getStats);
-router.get("/:id", CustomerController.getById);
 router.put("/:id", CustomerController.update);
 router.delete("/:id", CustomerController.delete);
+router.get("/:id", CustomerController.getById);
+
 
 export default router;

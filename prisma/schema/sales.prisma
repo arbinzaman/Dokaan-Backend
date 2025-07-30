@@ -1,6 +1,5 @@
 model Sales {
   id             BigInt   @id @default(autoincrement())
-  branch         String?
   quantity       Int
   totalPrice     Float
   soldAt         DateTime @default(now())
@@ -13,23 +12,26 @@ model Sales {
   itemUnit       String?
   mrp            Float?
   name           String
-  productId      BigInt   @map("product_id")
   purchasePrice  Float
   salesPrice     Float
-  sellerId       BigInt   @map("seller_id")
   serialNoOrIMEI String?
-  shopId         BigInt   @map("shop_id")
   size           String?
   wholesalePrice Float?
+  branch         String?
 
-  // New relation
-  customerId     BigInt?  @map("customer_id")
-  customer       Customer? @relation(fields: [customerId], references: [id])
+  // Foreign Keys
+  invoiceId  BigInt? // relation to Invoice
+  productId  BigInt  @map("product_id")
+  sellerId   BigInt? @map("seller_id")
+  shopId     BigInt  @map("shop_id")
+  customerId BigInt? @map("customer_id")
 
-  // Existing relations
-  product        Product  @relation(fields: [productId], references: [id])
-  seller         User     @relation("UserSales", fields: [sellerId], references: [id])
-  shop           Dokaan   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  // ✅ Relations (fully defined with names matching Invoice)
+  invoice  Invoice?  @relation("InvoiceSales", fields: [invoiceId], references: [id])
+  product  Product   @relation(fields: [productId], references: [id])
+  seller   User?     @relation("UserSales", fields: [sellerId], references: [id])
+  shop     Dokaan    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
 
   @@map("Sales")
 }

@@ -1,0 +1,16 @@
+model Income {
+  id         Int     @id @default(autoincrement())
+  amount     Float
+  source     String
+  category   String
+  notes      String?
+  date       String
+  created_at String?
+  updated_at String?
+
+  user_id  BigInt? // Fixed: match User.id
+  dokaanId BigInt? // Already correct
+
+  user   User?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  dokaan Dokaan? @relation(fields: [dokaanId], references: [id], onDelete: Cascade)
+}

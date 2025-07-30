@@ -7,20 +7,18 @@ export const createCustomer = async (data) => {
 
 // Get all customers with purchase details and favorite status
 export const getAllCustomersWithDetails = async (filters = {}) => {
-  const { year, month, day } = filters;
+  const { year, month, day, shopId } = filters;
 
   let dateFilter = {};
   if (year) {
-    // If month is a string like "January", convert to index
     let monthIndex = 0;
-
     if (typeof month === "string") {
       const parsedDate = new Date(`${month} 1, ${year}`);
       if (!isNaN(parsedDate)) {
         monthIndex = parsedDate.getMonth();
       }
     } else if (!isNaN(month)) {
-      monthIndex = Number(month) - 1; // Convert 1-based to 0-based index
+      monthIndex = Number(month) - 1;
     }
 
     const safeDay = !isNaN(day) ? Number(day) : 1;
@@ -41,9 +39,19 @@ export const getAllCustomersWithDetails = async (filters = {}) => {
   }
 
   const customers = await prisma.customer.findMany({
-    where: dateFilter,
+    where: {
+      ...dateFilter,
+      purchaseStats: {
+        some: {
+          dokaanId: shopId,
+        },
+      },
+    },
     include: {
       purchaseStats: {
+        where: {
+          dokaanId: shopId,
+        },
         include: {
           dokaan: true,
           product: true,
@@ -51,18 +59,17 @@ export const getAllCustomersWithDetails = async (filters = {}) => {
       },
     },
   });
-  
 
   return customers.map((customer) => {
     const shopSet = new Set(customer.purchaseStats.map((stat) => stat.dokaanId));
     const isFavorite = shopSet.size > 5;
-  
+
     const purchases = customer.purchaseStats.map((stat) => ({
       dokaanName: stat.dokaan.dokaan_name,
       productName: stat.product.name,
       purchaseCount: stat.purchaseCount,
     }));
-  
+
     return {
       id: customer.id,
       name: customer.name,
@@ -71,12 +78,11 @@ export const getAllCustomersWithDetails = async (filters = {}) => {
       address: customer.address,
       favorite: isFavorite,
       purchases,
-      createdAt: customer.createdAt, // ✅ CRITICAL
+      createdAt: customer.createdAt,
     };
   });
-  
-  
 };
+
 
 
 
@@ -218,5 +224,39 @@ export const getCustomerGrowthByShop = async (shopId) => {
     growthData,
     lastUpdatedMonth: latestMonth ? monthLabels[latestMonth.getMonth()] : null,
   };
+};
+
+
+// Search customers by name, phone, or email (partial, case-insensitive)
+export const searchCustomers = async ({ shopId, search }) => {
+  if (!shopId) throw new Error("shopId is required");
+
+  return await prisma.customer.findMany({
+    where: {
+      AND: [
+        {
+          purchaseStats: {
+            some: {
+              dokaanId: Number(shopId),
+            },
+          },
+        },
+        {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { phone: { contains: search, mode: "insensitive" } },
+          ],
+        },
+      ],
+    },
+    include: {
+      purchaseStats: {
+        where: {
+          dokaanId: Number(shopId),
+        },
+      },
+    },
+  });
 };
 

@@ -1,0 +1,33 @@
+model Invoice {
+  id            BigInt    @id @default(autoincrement())
+  invoiceNumber String    @unique
+  totalPrice    Float
+  discount      Float?
+  vatPercent    Float?
+  notes         String?
+  paymentStatus String?
+  paymentMethod String?
+  dueDate       DateTime?
+  paymentDate   DateTime?
+  paymentRef    String?
+  paymentNotes  String?
+
+  sellerName    String
+  shopName      String?
+  shopAddress   String?  // ✅ Add this if needed
+  shopPhone     String?  // ✅ Add this if needed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  sellerId BigInt?
+  seller   User?   @relation("UserInvoices", fields: [sellerId], references: [id])
+
+  shopId     BigInt?
+  shop       Dokaan?   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerId BigInt?
+  customer   Customer? @relation("CustomerInvoices", fields: [customerId], references: [id])
+  sales      Sales[]   @relation("InvoiceSales")
+
+  @@map("Invoices")
+}
